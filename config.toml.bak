@@ -1,0 +1,60 @@
+# How to get user token
+# https://discordhelp.net/discord-token
+user_token = "<YOUR_DISCORD_TOKEN>"
+
+# This can be changed in chat with `prefix <prefix>`
+command_prefix = "~" 
+
+# Used to determine which (semi-)NSFW content 
+# should posted in channels not marked as NSFW
+# Can be toggled in chat with `overridensfw`
+# 0 - Filters anything close to NSFW
+# 1 - Filters explicit content, allows mind NSFW
+# 2 - No filter
+global_nsfw_level = 1
+
+# Used for refering to yourself.
+# E.g. himself vs herself 
+is_male = true
+
+emoteserver = 0
+tags = []
+
+[pfp_switcher]
+enabled = true
+# Delay between switching in minutes, setting below
+# 10 minutes will likely result in a ratelimit and
+# a temporary ban on changing your avatar
+delay = 45
+
+# Mode to select a new profile pic
+# 0 - Completely Random
+# 1 - Alphabetically
+mode = 0
+
+[mal] 
+enabled = false
+# You can create a MAL client at https://myanimelist.net/apiconfig
+client_id = "<CLIENT_ID>"
+client_secret = "<CLIENT_SECRET>"
+
+[webhooks]
+# Recommended to keep under 25 so you don't
+# get ratelimited too quickly
+threads = 24
+
+# Include @everyone above embed/message
+ping_everyone = true
+message = "L3af#0001 >> You"
+
+[webhooks.embed]
+title = "My Title"
+description = "Some Description"
+fields = []
+
+[autodelete]
+enabled = true
+# Delay before auto deleting bot message.
+# This doesn't delete messages like ~img,
+# ~tag, or ~serverinfo
+delay = 5
