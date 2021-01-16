@@ -46,12 +46,6 @@ delay = 45
 # 1 - Alphabetically
 mode = 0
 
-[mal] 
-enabled = false
-# You can create a MAL client at https://myanimelist.net/apiconfig
-client_id = "<CLIENT_ID>"
-client_secret = "<CLIENT_SECRET>"
-
 [giveaway]
 enabled = true
 delay = 120
