@@ -17,8 +17,22 @@ global_nsfw_level = 1
 # E.g. himself vs herself 
 is_male = true
 
+# The ID of the server for which to add emotes
 emoteserver = 0
-tags = []
+
+# If enabled, will attempt to snipe nitro
+nitrosniper = true
+
+# Automatically grab slotbot wallets
+[slotbot]
+enabled = true
+dynamic_prefix = false
+mode = 0
+whitelisted_guilds = []
+blacklisted_guilds = []
+
+emoteserver = 0
+[tags]
 
 [pfp_switcher]
 enabled = true
@@ -38,19 +52,9 @@ enabled = false
 client_id = "<CLIENT_ID>"
 client_secret = "<CLIENT_SECRET>"
 
-[webhooks]
-# Recommended to keep under 25 so you don't
-# get ratelimited too quickly
-threads = 24
-
-# Include @everyone above embed/message
-ping_everyone = true
-message = "L3af#0001 >> You"
-
-[webhooks.embed]
-title = "My Title"
-description = "Some Description"
-fields = []
+[giveaway]
+enabled = true
+delay = 120
 
 [autodelete]
 enabled = true
