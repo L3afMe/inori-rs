@@ -6,15 +6,12 @@ use serenity::{
     utils::Colour,
 };
 
-use serenity_utils::menu::{Menu, MenuOptions};
-
 use once_cell::sync::Lazy;
-
 use regex::Regex;
-
+use serenity_utils::menu::{Menu, MenuOptions};
 use tokio::time::{delay_for, Duration};
 
-use crate::{models::discord::Emote, Settings};
+use crate::{models::discord::Emote, utils::general::get_perms, Settings};
 
 /*
  * Reminder if changing format that these
@@ -43,16 +40,28 @@ pub async fn say(ctx: &Context, channel: &ChannelId, title: &str, content: &str)
 }
 
 pub async fn send(ctx: &Context, channel: &ChannelId, title: &str, content: &str) -> Message {
-    let embed = default_embed(title);
-    channel
+    let t = crate::models::discord::MessageCreator::new("Test");
+    let perms = get_perms(ctx, channel).await;
+    return channel
         .send_message(&ctx, |m| {
-            m.embed(|e| {
-                e.0 = embed.0;
-                e.description(content)
-            })
+            m.0 = t.to_embed();
+
+            if perms.embed_links() {
+                let embed = default_embed(title);
+                m.embed(|e| {
+                    e.0 = embed.0;
+                    e.description(content)
+                });
+            } else {
+                let content = format!("```ini\n[{}]\n{}```", title, content);
+
+                m.content(content);
+            }
+
+            m
         })
         .await
-        .unwrap()
+        .unwrap();
 }
 
 pub async fn say_error(
@@ -118,7 +127,7 @@ pub async fn send_loading(
 pub async fn delete(ctx: &Context, msg: &Message) -> CommandResult {
     let ad_delay = {
         let data = ctx.data.read().await;
-        let settings: tokio::sync::MutexGuard<'_, Settings> = data
+        let settings = data
             .get::<Settings>()
             .expect("Expected Setting in TypeMap.")
             .lock()

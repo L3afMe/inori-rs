@@ -476,9 +476,9 @@ async fn purge(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 
             let runtime = Builder::new()
                 .threaded_scheduler()
-                .core_threads(4)
+                .core_threads(16)
                 .thread_name("purge-thread")
-                .thread_stack_size(3 * 1024 * 1024)
+                .thread_stack_size(1024 * 1024 / 2)
                 .build()
                 .unwrap();
 
@@ -487,10 +487,11 @@ async fn purge(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                     let ctx = ctx.clone();
 
                     runtime.spawn(async move {
-                        ctx.http
-                            .delete_message(message.channel_id.0, message.id.0)
-                            .await
-                            .unwrap_or(());
+                        println!("Here!");
+                        /*ctx.http
+                        .delete_message(message.channel_id.0, message.id.0)
+                        .await
+                        .unwrap_or(());*/
                     });
 
                     purge_count += 1;
@@ -500,8 +501,6 @@ async fn purge(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                     break;
                 }
             }
-
-            runtime.shutdown_timeout(std::time::Duration::from_secs(10));
 
             let end = if delete_n == 1 { "message" } else { "messages" };
             find_msg

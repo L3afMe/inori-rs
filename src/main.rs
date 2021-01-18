@@ -1,3 +1,5 @@
+#![feature(async_closure)]
+
 mod commands;
 mod models;
 mod settings;
@@ -30,7 +32,7 @@ use std::{
 
 use commands::*;
 use models::settings::Settings;
-use settings::{load_settings, save_settings};
+use settings::{load_settings, save_settings, setup_settings};
 use utils::chat::say_error;
 
 use once_cell::sync::Lazy;
@@ -475,7 +477,17 @@ async fn spawn_pfp_change_thread(ctx: Arc<Mutex<Context>>) {
 
 #[tokio::main]
 async fn main() {
-    let settings = load_settings();
+    let settings = if Path::exists(Path::new(&"config.toml")) {
+        match load_settings() {
+            Ok(settings) => settings,
+            Err(why) => {
+                println!("[Config] Error while loading config: {}", why);
+                return;
+            }
+        }
+    } else {
+        setup_settings().await
+    };
 
     let framework = StandardFramework::new()
         .configure(|c| {

@@ -3,7 +3,7 @@
 user_token = "<YOUR_DISCORD_TOKEN>"
 
 # This can be changed in chat with `prefix <prefix>`
-command_prefix = "~" 
+command_prefix = ";" 
 
 # Used to determine which (semi-)NSFW content 
 # should posted in channels not marked as NSFW
@@ -23,15 +23,24 @@ emoteserver = 0
 # If enabled, will attempt to snipe nitro
 nitrosniper = true
 
+send_embeds = true
+
 # Automatically grab slotbot wallets
 [slotbot]
 enabled = true
+# Dynamic Prefix will get the prefix with Regex 
+# which will cause it to be a bit slower but 
+# will allow it to work on servers which have
+# a different prefix
 dynamic_prefix = false
+# Different modes to check if should send a message
+# 0 - All servers
+# 1 - Whitelist, put servers in whitelisted_guilds
+# 2 - Blacklist, put servers in blacklisted_guilds
 mode = 0
 whitelisted_guilds = []
 blacklisted_guilds = []
 
-emoteserver = 0
 [tags]
 
 [pfp_switcher]
@@ -47,7 +56,9 @@ delay = 45
 mode = 0
 
 [giveaway]
+# If enabled then giveaways will automatically be joined
 enabled = true
+# Delay before automatically joining the giveaway
 delay = 120
 
 [autodelete]

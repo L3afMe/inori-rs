@@ -6,6 +6,32 @@ use serenity::{
 
 use crate::utils::chat::{default_embed, say_error, send, send_embed_paginator};
 
+async fn check_compat(ctx: &Context, msg: &Message, u1: &User, u2: &User) {
+    let compat = (u1.id.0 + u2.id.0) % 100;
+}
+
+#[command]
+#[description("Check compatability between two people")]
+#[usage("[@user]")]
+#[example("@L3af#0001")]
+#[min_args(1)]
+async fn compatibility(ctx: &Context, msg: &Message) -> CommandResult {
+    if msg.mentions.len(exi == 1 {
+        check_compat(
+            ctx,
+            msg,
+            &msg.author,
+            msg.mentions.get(0).unwrap_or(msg.author),
+        )
+        .await;
+    } else {
+        for mention in &msg.mentions {
+            print_dick(ctx, msg, &mention).await;
+        }
+    }
+    Ok(())
+}
+
 async fn print_dick(ctx: &Context, msg: &Message, user: &User) {
     let len = (user.id.0 % 15) + 1;
     let mut dick = "8".to_string();
