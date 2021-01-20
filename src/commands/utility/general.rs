@@ -750,3 +750,53 @@ async fn hypesquad(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         },
     };
 }
+
+#[command]
+#[aliases("b64")]
+#[description("Encode/decode base64")]
+#[usage("<encode/decode> <message>")]
+#[example("decode SW5vcmkgaXMgdGhlIGJlc3Qgd2FpZnU=")]
+#[example("encode I agree")]
+#[min_args(2)]
+async fn base64(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let mode = args.single::<String>().unwrap_or_default();
+    let encode = match mode.to_lowercase().as_ref() {
+        "encode" | "enc" => true,
+        "decode" | "dec" => false,
+        _ => {
+            return msg
+                .channel_id
+                .send_tmp(ctx, |m: &mut MessageCreator| {
+                    m.error().title("Base64").content("Invalid argument")
+                })
+                .await;
+        },
+    };
+
+    let content = if encode {
+        let msg = args.rest();
+        let enc = base64::encode(msg);
+
+        format!("Input: {}\nOutput: {}", msg, enc)
+    } else {
+        let enc_msg = args.rest();
+        let dec_bytes = base64::decode(enc_msg).unwrap_or_default();
+        let dec = match String::from_utf8(dec_bytes) {
+            Ok(dec) => dec,
+            Err(err) => {
+                return msg
+                    .channel_id
+                    .send_tmp(ctx, |m: &mut MessageCreator| {
+                        m.error().title("Base64").content(format!("Invalid UTF-8 sequence: {}", err))
+                    })
+                    .await;
+            },
+        };
+
+        format!("Input: {}\nOutput: {:?}", enc_msg, dec)
+    };
+
+    msg.channel_id
+        .send_tmp(ctx, |m: &mut MessageCreator| m.title("Base64").content(content))
+        .await
+}

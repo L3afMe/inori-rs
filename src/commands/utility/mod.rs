@@ -13,6 +13,7 @@ use tags::*;
 #[commands(
     about,
     avatar,
+    base64,
     emotestealer,
     exchange,
     hypesquad,
