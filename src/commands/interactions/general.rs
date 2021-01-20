@@ -9,11 +9,8 @@ use serenity::{
 
 use crate::{
     models::commands::NekosLifeResponse,
-    utils::{
-        chat::{default_embed, say_error},
-        checks::{NSFW_MODERATE_CHECK, NSFW_STRICT_CHECK},
-    },
-    Settings,
+    utils::checks::{NSFW_MODERATE_CHECK, NSFW_STRICT_CHECK},
+    InoriChannelUtils, InoriMessageUtils, MessageCreator, Settings,
 };
 
 async fn img_command(
@@ -24,17 +21,23 @@ async fn img_command(
     do_msg: &str,
 ) -> CommandResult {
     if msg.mentions.len() > 1 {
-        return say_error(
-            ctx,
-            &msg.channel_id,
-            command,
-            &format!(
-                "Stop being such a slut, you can only {} 1 person at once",
-                command.to_lowercase()
-            ),
-        )
-        .await;
+        return msg
+            .channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error().title(command).content(format!(
+                    "Stop being such a slut, you can only\
+                    {} 1 person at once",
+                    command.to_lowercase()
+                ))
+            })
+            .await;
     }
+
+    let mut new_msg = msg
+        .channel_id
+        .send_loading(ctx, command, "Loading image")
+        .await
+        .unwrap();
 
     let content = if msg.mentions.len() == 0 {
         let data = ctx.data.read().await;
@@ -67,18 +70,13 @@ async fn img_command(
 
     let res: NekosLifeResponse = serde_json::from_str(&res).expect("Couldn't parse response.");
 
-    let embed = default_embed(command);
-    msg.channel_id
-        .send_message(&ctx, |m| {
-            m.embed(|e| {
-                e.0 = embed.0;
-
-                e.description(do_msg.replace("{0}", &my_name).replace("{1}", content))
-                    .image(res.url)
-            })
+    new_msg
+        .update_noret(ctx, |m: &mut MessageCreator| {
+            m.title(command)
+                .content(do_msg.replace("{0}", &my_name).replace("{1}", content))
+                .image(res.url)
         })
-        .await?;
-    Ok(())
+        .await
 }
 
 #[command]

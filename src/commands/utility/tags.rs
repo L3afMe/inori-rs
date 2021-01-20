@@ -1,22 +1,10 @@
 use serenity::{
     framework::standard::{macros::command, Args, CommandResult},
-    model::{channel::Message, id::ChannelId},
+    model::channel::Message,
     prelude::*,
 };
 
-use crate::{save_settings, utils::chat, Settings};
-
-async fn say(ctx: &Context, channel: &ChannelId, content: &str) -> CommandResult {
-    chat::say(ctx, channel, "Tags", content).await
-}
-
-async fn say_error(ctx: &Context, channel: &ChannelId, content: &str) -> CommandResult {
-    chat::say_error(ctx, channel, "Tags", content).await
-}
-
-async fn send(ctx: &Context, channel: &ChannelId, content: &str) -> Message {
-    chat::send(ctx, channel, "Tags", content).await
-}
+use crate::{save_settings, InoriChannelUtils, MessageCreator, Settings};
 
 #[command]
 #[aliases("delete", "remove", "del", "rem", "d", "r")]
@@ -41,17 +29,21 @@ async fn delete(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
         drop(settings);
         drop(data);
 
-        say(
-            ctx,
-            &msg.channel_id,
-            &format!("Removed tag with name '{}'", name),
-        )
-        .await
+        msg.channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.title("Tags")
+                    .content(format!("Removed tag with name '{}'", name))
+            })
+            .await
     } else {
         drop(settings);
         drop(data);
 
-        say_error(ctx, &msg.channel_id, "Invalid tag name").await
+        msg.channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error().title("Tags").content("Invalid tag name")
+            })
+            .await
     }
 }
 
@@ -75,12 +67,13 @@ async fn preppend(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
         drop(settings);
         drop(data);
 
-        say_error(
-            ctx,
-            &msg.channel_id,
-            &format!("Tag with name '{}' doesn't exists", name),
-        )
-        .await
+        msg.channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error()
+                    .title("Tags")
+                    .content(format!("Tag with name '{}' doesn't exist", name))
+            })
+            .await
     } else {
         let old_msg = (&settings.tags.get(&name).unwrap()).to_string();
         settings.tags.remove(&name);
@@ -92,12 +85,12 @@ async fn preppend(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
         drop(settings);
         drop(data);
 
-        say(
-            ctx,
-            &msg.channel_id,
-            &format!("Updated tag with name '{}'", name),
-        )
-        .await
+        msg.channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.title("Tags")
+                    .content(format!("Updated tag with name '{}'", name))
+            })
+            .await
     }
 }
 
@@ -121,12 +114,13 @@ async fn append(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
         drop(settings);
         drop(data);
 
-        say_error(
-            ctx,
-            &msg.channel_id,
-            &format!("Tag with name '{}' doesn't exists", name),
-        )
-        .await
+        msg.channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error()
+                    .title("Tags")
+                    .content(format!("Tag with name '{}' doesn't exist", name))
+            })
+            .await
     } else {
         let old_msg = (&settings.tags.get(&name).unwrap()).to_string();
         settings.tags.remove(&name);
@@ -138,12 +132,12 @@ async fn append(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
         drop(settings);
         drop(data);
 
-        say(
-            ctx,
-            &msg.channel_id,
-            &format!("Updated tag with name '{}'", name),
-        )
-        .await
+        msg.channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.title("Tags")
+                    .content(format!("Updated tag with name '{}'", name))
+            })
+            .await
     }
 }
 
@@ -167,12 +161,13 @@ async fn replace(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
         drop(settings);
         drop(data);
 
-        say_error(
-            ctx,
-            &msg.channel_id,
-            &format!("Tag with name '{}' doesn't exists", name),
-        )
-        .await
+        msg.channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error()
+                    .title("Tags")
+                    .content(format!("Tag with name '{}' doesn't exists", name))
+            })
+            .await
     } else {
         if message.contains("|") {
             let split = message.split("|").collect::<Vec<&str>>();
@@ -189,17 +184,21 @@ async fn replace(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
             drop(settings);
             drop(data);
 
-            return say(
-                ctx,
-                &msg.channel_id,
-                &format!("Updated tag with name '{}'", name),
-            )
-            .await;
+            msg.channel_id
+                .send_tmp(ctx, |m: &mut MessageCreator| {
+                    m.title("Tags")
+                        .content(format!("Updated tag with name '{}'", name))
+                })
+                .await
         } else {
             drop(settings);
             drop(data);
 
-            return say_error(ctx, &msg.channel_id, "No replacement text found").await;
+            msg.channel_id
+                .send_tmp(ctx, |m: &mut MessageCreator| {
+                    m.error().title("Tags").content("No replacement text found")
+                })
+                .await
         }
     }
 }
@@ -224,12 +223,13 @@ async fn edit(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
         drop(settings);
         drop(data);
 
-        say_error(
-            ctx,
-            &msg.channel_id,
-            &format!("Tag with name '{}' doesn't exists", name),
-        )
-        .await
+        msg.channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error()
+                    .title("Tags")
+                    .content(format!("Tag with name '{}' doesn't exists", name))
+            })
+            .await
     } else {
         settings.tags.remove(&name);
 
@@ -239,12 +239,12 @@ async fn edit(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
         drop(settings);
         drop(data);
 
-        return say(
-            ctx,
-            &msg.channel_id,
-            &format!("Updated tag with name '{}'", name),
-        )
-        .await;
+        msg.channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.title("Tags")
+                    .content(format!("Updated tag with name '{}'", name))
+            })
+            .await
     }
 }
 
@@ -269,12 +269,13 @@ async fn add(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
         drop(settings);
         drop(data);
 
-        return say_error(
-            ctx,
-            &msg.channel_id,
-            &format!("Tag with name '{}' already exists", name),
-        )
-        .await;
+        msg.channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error()
+                    .title("Tags")
+                    .content(format!("Tag with name '{}' already exists", name))
+            })
+            .await
     } else {
         settings.tags.insert(name.to_string(), message.to_string());
         save_settings(&settings);
@@ -282,12 +283,12 @@ async fn add(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
         drop(settings);
         drop(data);
 
-        return say(
-            ctx,
-            &msg.channel_id,
-            &format!("Added tag with name '{}'", name),
-        )
-        .await;
+        msg.channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.title("Tags")
+                    .content(format!("Added tag with name '{}'", name))
+            })
+            .await
     }
 }
 
@@ -313,7 +314,11 @@ async fn _list(ctx: &Context, msg: &Message) -> CommandResult {
         content
     };
 
-    say(ctx, &msg.channel_id, &content).await
+    msg.channel_id
+        .send_tmp(ctx, |m: &mut MessageCreator| {
+            m.title("Tags").content(content)
+        })
+        .await
 }
 
 #[command]
@@ -333,7 +338,7 @@ async fn list(ctx: &Context, msg: &Message) -> CommandResult {
 #[sub_commands(add, delete, list, preppend, append, edit, replace)]
 async fn tags(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     if args.is_empty() {
-        _list(ctx, msg).await?;
+        return _list(ctx, msg).await;
     } else {
         let data = ctx.data.write().await;
         let settings = data
@@ -347,18 +352,26 @@ async fn tags(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             let message = settings.tags.get(name).unwrap().to_string();
             drop(settings);
             drop(data);
-            send(ctx, &msg.channel_id, &format!("**{}**\n{}", name, message)).await;
+
+            return msg
+                .channel_id
+                .send_noret(ctx, |m: &mut MessageCreator| {
+                    m.title("Tags")
+                        .content(format!("**{}**\n{}", name, message))
+                })
+                .await;
         } else {
             drop(settings);
             drop(data);
-            say_error(
-                ctx,
-                &msg.channel_id,
-                &format!("Unknown tag: {}", args.rest()),
-            )
-            .await?;
+
+            return msg
+                .channel_id
+                .send_tmp(ctx, |m: &mut MessageCreator| {
+                    m.error()
+                        .title("Tags")
+                        .content(format!("Unknown tag: {}", args.rest()))
+                })
+                .await;
         }
     };
-
-    Ok(())
 }

@@ -9,10 +9,8 @@ use serenity::{
 
 use crate::{
     models::commands::{Img, NekoBotResponse, NekosLifeResponse, Rule34Post, Rule34Posts},
-    utils::{
-        chat::{default_embed, say_error, send, send_loading},
-        checks::{can_nsfw_moderate, can_nsfw_strict, NSFW_STRICT_CHECK},
-    },
+    utils::checks::{can_nsfw_moderate, can_nsfw_strict, NSFW_STRICT_CHECK},
+    InoriChannelUtils, InoriMessageUtils, MessageCreator,
 };
 
 use once_cell::sync::Lazy;
@@ -50,37 +48,37 @@ async fn get_rule_34_posts(tags: String) -> Rule34Posts {
 #[checks(NSFW_Strict)]
 #[min_args(1)]
 async fn rule34(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    let mut new_msg = msg
+        .channel_id
+        .send_loading(ctx, "Rule 34", "Loading some juicy images")
+        .await
+        .unwrap();
+
     let tags = args.rest().split(" ").collect::<Vec<&str>>();
     let res = get_rule_34_posts(tags.join("+")).await;
     let posts: Vec<Rule34Post> = if let Some(posts) = res.posts {
         posts
     } else {
-        return say_error(
-            ctx,
-            &msg.channel_id,
-            "Rule 34",
-            "Well you fucking did it, you found something that doesn't exist in porn",
-        )
-        .await;
+        return new_msg
+            .update_tmp(ctx, |m: &mut MessageCreator| {
+                m.error().title("Rule 34").content(
+                    "Well you fucking did it, you found something that doesn't exist in porn",
+                )
+            })
+            .await;
     };
 
     let post: &Rule34Post = posts
         .get(rand::thread_rng().gen_range(0..posts.len()))
         .unwrap();
 
-    let embed = default_embed("Rules 34");
-    msg.channel_id
-        .send_message(&ctx, |m| {
-            m.embed(|e| {
-                e.0 = embed.0;
-
-                e.description(&format!("Tags: {}", tags.join(", ")))
-                    .image((&post.file_url).to_string())
-            })
+    new_msg
+        .update_noret(ctx, |m: &mut MessageCreator| {
+            m.title("Rule 34")
+                .content(format!("Tags: {}", tags.join(", ")))
+                .image(post.file_url.clone())
         })
-        .await?;
-
-    Ok(())
+        .await
 }
 
 static VALID_IMAGES: Lazy<Vec<Img>> = Lazy::new(|| {
@@ -178,13 +176,12 @@ async fn do_image(
 ) -> CommandResult {
     let title = if is_image_bomb { "Image Bomb" } else { "Image" };
     let image_str = if amount > 1 { "images" } else { "image" };
-    let mut new_msg = send_loading(
-        ctx,
-        &msg.channel_id,
-        title,
-        &format!("Loading {} {}", amount, image_str),
-    )
-    .await;
+
+    let mut new_msg = msg
+        .channel_id
+        .send_loading(ctx, title, &format!("Loading {} {}", amount, image_str))
+        .await
+        .unwrap();
 
     let mut urls = Vec::new();
     for _ in 0..amount {
@@ -222,31 +219,24 @@ async fn do_image(
         urls.push(url);
     }
 
-    let embed = default_embed(title);
-    new_msg
-        .edit(&ctx, |m| {
-            m.embed(|e| {
-                e.0 = embed.0;
-
-                e.description(format!("Tag: {}", img.link)).image(&urls[0])
-            })
+    let _ = new_msg
+        .update(ctx, |m: &mut MessageCreator| {
+            m.title(title)
+                .content(format!("Tag: {}", img.link))
+                .image(&urls[0])
         })
-        .await
-        .unwrap_or(());
+        .await;
 
     if urls.len() > 1 {
         for url in urls[1..urls.len()].iter() {
-            let embed = default_embed(title);
-            msg.channel_id
-                .send_message(&ctx.http, |m| {
-                    m.embed(|e| {
-                        e.0 = embed.0;
-
-                        e.description(format!("Tag: {}", img.link)).image(url)
-                    })
+            let _ = msg
+                .channel_id
+                .send(ctx, |m: &mut MessageCreator| {
+                    m.title(title)
+                        .content(format!("Tag: {}", img.link))
+                        .image(url)
                 })
-                .await
-                .unwrap();
+                .await;
         }
     }
 
@@ -271,25 +261,27 @@ async fn imagebomb(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
         let amount = match args.single::<u64>() {
             Ok(amount) => {
                 if amount < 1 {
-                    return say_error(
-                        ctx,
-                        &msg.channel_id,
-                        "Image Bomb",
-                        "Amount cannot be less than 1",
-                    )
-                    .await;
+                    return msg
+                        .channel_id
+                        .send_tmp(ctx, |m: &mut MessageCreator| {
+                            m.error()
+                                .title("Image Bomb")
+                                .content("Amount cannot be less than 1")
+                        })
+                        .await;
                 } else {
                     amount
                 }
             }
             Err(_) => {
-                return say_error(
-                    ctx,
-                    &msg.channel_id,
-                    "Image Bomb",
-                    "Unable to parse given value to number",
-                )
-                .await;
+                return msg
+                    .channel_id
+                    .send_tmp(ctx, |m: &mut MessageCreator| {
+                        m.error()
+                            .title("Image Bomb")
+                            .content("Unable to parse given value to number")
+                    })
+                    .await;
             }
         };
 
@@ -314,48 +306,44 @@ async fn imagebomb(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
             };
 
             if is_too_nsfw {
-                return say_error(
-                    ctx,
-                    &msg.channel_id,
-                    "Image Bomb",
-                    &format!(
-                        "This server is marked not marked as NSFW and \
-                        you've specified a NSFW image.\nThis can be overriden \
-                        by executing `nsfwfilter {}`",
-                        selected.level
-                    ),
-                )
-                .await;
+                return msg
+                    .channel_id
+                    .send_tmp(ctx, |m: &mut MessageCreator| {
+                        m.error().title("Image Bomb").content(format!(
+                            "This server is marked not marked as NSFW and \
+                            you've specified a NSFW image.\nThis can be overriden \
+                            by executing `nsfwfilter {}`",
+                            selected.level
+                        ))
+                    })
+                    .await;
             }
 
             return do_image(ctx, msg, &selected, amount, true).await;
         } else {
-            return say_error(
-                ctx,
-                &msg.channel_id,
-                "Image",
-                &format!("Unable to find image tagged '{}'", arg),
-            )
-            .await;
+            return msg
+                .channel_id
+                .send_tmp(ctx, |m: &mut MessageCreator| {
+                    m.error()
+                        .title("Image Bomb")
+                        .content(format!("Unable to find image tagged '{}'", arg))
+                })
+                .await;
         }
     }
 
-    send(
-        ctx,
-        &msg.channel_id,
-        "Image",
-        &format!(
-            "**Valid images**\n`{}`",
-            VALID_IMAGES
-                .iter()
-                .map(|s| String::from(&s.link))
-                .collect::<Vec<String>>()
-                .join("`, `")
-        ),
-    )
-    .await;
-
-    Ok(())
+    msg.channel_id
+        .send_noret(ctx, |m: &mut MessageCreator| {
+            m.title("Image").content(format!(
+                "**Valid images**\n`{}`",
+                VALID_IMAGES
+                    .iter()
+                    .map(|s| String::from(&s.link))
+                    .collect::<Vec<String>>()
+                    .join("`, `")
+            ))
+        })
+        .await
 }
 
 #[command]
@@ -394,46 +382,42 @@ async fn image(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             };
 
             if is_too_nsfw {
-                return say_error(
-                    ctx,
-                    &msg.channel_id,
-                    "Image",
-                    &format!(
-                        "This server is marked not marked as NSFW and \
-                        you've specified a NSFW image.\nThis can be overriden \
-                        by executing `nsfwfilter {}`",
-                        selected.level
-                    ),
-                )
-                .await;
+                return msg
+                    .channel_id
+                    .send_tmp(ctx, |m: &mut MessageCreator| {
+                        m.error().title("Image").content(format!(
+                            "This server is marked not marked as NSFW and \
+                            you've specified a NSFW image.\nThis can be overriden \
+                            by executing `nsfwfilter {}`",
+                            selected.level
+                        ))
+                    })
+                    .await;
             }
 
             return do_image(ctx, msg, selected, 1, false).await;
         } else {
-            return say_error(
-                ctx,
-                &msg.channel_id,
-                "Image",
-                &format!("Unable to find image tagged '{}'", arg),
-            )
-            .await;
+            return msg
+                .channel_id
+                .send_tmp(ctx, |m: &mut MessageCreator| {
+                    m.error()
+                        .title("Image")
+                        .content(format!("Unable to find image tagged '{}'", arg))
+                })
+                .await;
         }
     }
 
-    send(
-        ctx,
-        &msg.channel_id,
-        "Image",
-        &format!(
-            "**Valid images**\n`{}`",
-            VALID_IMAGES
-                .iter()
-                .map(|s| String::from(&s.link))
-                .collect::<Vec<String>>()
-                .join("`, `")
-        ),
-    )
-    .await;
-
-    Ok(())
+    msg.channel_id
+        .send_noret(ctx, |m: &mut MessageCreator| {
+            m.title("Image").content(format!(
+                "**Valid images**\n`{}`",
+                VALID_IMAGES
+                    .iter()
+                    .map(|s| String::from(&s.link))
+                    .collect::<Vec<String>>()
+                    .join("`, `")
+            ))
+        })
+        .await
 }

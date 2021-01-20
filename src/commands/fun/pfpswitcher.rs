@@ -5,7 +5,6 @@ use serenity::{
     prelude::*,
     utils::read_image,
 };
-
 use tokio::{fs::File, prelude::*};
 
 use std::{
@@ -13,23 +12,7 @@ use std::{
     path::Path,
 };
 
-use crate::{
-    save_settings,
-    utils::{chat, chat::default_embed},
-    Settings,
-};
-
-async fn say(ctx: &Context, channel: &ChannelId, content: &str) -> CommandResult {
-    chat::say(ctx, channel, "Profile Picture Switcher", content).await
-}
-
-async fn say_error(ctx: &Context, channel: &ChannelId, content: &str) -> CommandResult {
-    chat::say_error(ctx, channel, "Profile Picture Switcher", content).await
-}
-
-async fn send_loading(ctx: &Context, channel: &ChannelId, content: &str) -> Message {
-    chat::send_loading(ctx, channel, "Profile Picture Switcher", content).await
-}
+use crate::{save_settings, InoriChannelUtils, InoriMessageUtils, MessageCreator, Settings};
 
 #[command]
 #[aliases("ps")]
@@ -37,12 +20,13 @@ async fn send_loading(ctx: &Context, channel: &ChannelId, content: &str) -> Mess
 #[min_args(1)]
 #[sub_commands(enable, disable, toggle, change, delay, mode, list, view, add, delete)]
 async fn pfpswitcher(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    say_error(
-        ctx,
-        &msg.channel_id,
-        &format!("Unknown subcommand: {}", args.current().unwrap()),
-    )
-    .await
+    msg.channel_id
+        .send_tmp(ctx, |m: &mut MessageCreator| {
+            m.error()
+                .title("Profile Picture Switcher")
+                .content(format!("Unknown subcommand: {}", args.current().unwrap()))
+        })
+        .await
 }
 
 #[command]
@@ -67,7 +51,12 @@ async fn toggle(ctx: &Context, msg: &Message) -> CommandResult {
 
     drop(settings);
     drop(data);
-    say(ctx, &msg.channel_id, content).await
+
+    msg.channel_id
+        .send_tmp(ctx, |m: &mut MessageCreator| {
+            m.title("Profile Picture Switcher").content(content)
+        })
+        .await
 }
 
 #[command]
@@ -90,7 +79,12 @@ async fn enable(ctx: &Context, msg: &Message) -> CommandResult {
 
     drop(settings);
     drop(data);
-    say(ctx, &msg.channel_id, content).await
+
+    msg.channel_id
+        .send_tmp(ctx, |m: &mut MessageCreator| {
+            m.title("Profile Picture Switcher").content(content)
+        })
+        .await
 }
 
 #[command]
@@ -113,16 +107,21 @@ async fn disable(ctx: &Context, msg: &Message) -> CommandResult {
 
     drop(settings);
     drop(data);
-    say(ctx, &msg.channel_id, content).await
+
+    msg.channel_id
+        .send_tmp(ctx, |m: &mut MessageCreator| {
+            m.title("Profile Picture Switcher").content(content)
+        })
+        .await
 }
 
 #[command]
 #[aliases("m")]
 #[description(
     "Set the mode of which pictures get chosen\n\
-                 **Modes**\n\
-                 0 - Random order\n\
-                 1 - Alphabetical order"
+    **Modes**\n\
+    0 - Random order\n\
+    1 - Alphabetical order"
 )]
 #[usage("<mode>")]
 #[example("1")]
@@ -158,27 +157,41 @@ async fn mode(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                 drop(settings);
                 drop(data);
 
-                return say_error(
-                    ctx,
-                    &msg.channel_id,
-                    "Invalid mode specified.\n\
-                    **Valid modes**\n\
-                    `0` - Random\n\
-                    `1` - Alphabetical",
-                )
-                .await;
+                return msg
+                    .channel_id
+                    .send_tmp(ctx, |m: &mut MessageCreator| {
+                        m.error().title("Profile Picture Switcher").content(
+                            "Invalid mode specified.\n\
+                            **Valid modes**\n\
+                            `0` - Random\n\
+                            `1` - Alphabetical",
+                        )
+                    })
+                    .await;
             }
         } else {
             drop(settings);
             drop(data);
 
-            return say_error(ctx, &msg.channel_id, "Unable to parse mode").await;
+            return msg
+                .channel_id
+                .send_tmp(ctx, |m: &mut MessageCreator| {
+                    m.error()
+                        .title("Profile Picture Switcher")
+                        .content("Unable to parse mode")
+                })
+                .await;
         }
     };
 
     drop(settings);
     drop(data);
-    say(ctx, &msg.channel_id, &content).await
+
+    msg.channel_id
+        .send_tmp(ctx, |m: &mut MessageCreator| {
+            m.title("Profile Picture Switcher").content(content)
+        })
+        .await
 }
 
 #[command]
@@ -209,12 +222,14 @@ async fn delay(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         )
     } else if let Ok(delay) = arg.parse::<u32>() {
         if delay < 10 {
-            return say_error(
-                ctx,
-                &msg.channel_id,
-                "Minimum delay is 45 minutes to avoid rate limiting",
-            )
-            .await;
+            return msg
+                .channel_id
+                .send_tmp(ctx, |m: &mut MessageCreator| {
+                    m.error()
+                        .title("Profile Picture Switcher")
+                        .content("Minimum delay is 45 minutes to avoid rate limiting")
+                })
+                .await;
         } else {
             settings.pfp_switcher.delay = delay;
             save_settings(&settings);
@@ -222,12 +237,24 @@ async fn delay(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             format!("Delay set to {} minutes", delay)
         }
     } else {
-        "Unable to parse delay to number".to_string()
+        return msg
+            .channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error()
+                    .title("Profile Picture Switcher")
+                    .content("Unable to parse delay to number")
+            })
+            .await;
     };
 
     drop(settings);
     drop(data);
-    say(ctx, &msg.channel_id, &content).await
+
+    msg.channel_id
+        .send_tmp(ctx, |m: &mut MessageCreator| {
+            m.title("Profile Picture Switcher").content(content)
+        })
+        .await
 }
 
 #[command]
@@ -238,12 +265,14 @@ async fn delay(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[num_args(1)]
 async fn add(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     if msg.attachments.len() != 1 {
-        return say(
-            ctx,
-            &msg.channel_id,
-            "**1 image** attached is required to add a new profile pic",
-        )
-        .await;
+        return msg
+            .channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error()
+                    .title("Profile Picture Switcher")
+                    .content("**1 image** attached is required to add a new profile picture")
+            })
+            .await;
     }
 
     let mut file_name = args.current().unwrap().to_string();
@@ -262,40 +291,38 @@ async fn add(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     }
 
     if Path::new(&format!("./pfps/{}", file_name)).is_file() {
-        return say_error(
-            ctx,
-            &msg.channel_id,
-            &format!("File named '{}' already exists", file_name),
-        )
-        .await;
+        return msg
+            .channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error()
+                    .title("Profile Picture Switcher")
+                    .content(format!("File named '{}' already exists", file_name))
+            })
+            .await;
     }
+
+    let mut new_msg = msg
+        .channel_id
+        .send_loading(
+            ctx,
+            "Profile Picture Switcher",
+            "Uploading new profile picture",
+        )
+        .await
+        .unwrap();
 
     let img = reqwest::get(atch_url).await?.bytes().await?;
 
     let mut file = File::create(format!("./pfps/{}", file_name)).await.unwrap();
     file.write_all(&img).await?;
 
-    let img = File::open(format!("./pfps/{}", file_name)).await.unwrap();
-
-    let embed = default_embed("Profile Picture Switcher");
-    chat::delete(
-        ctx,
-        &msg.channel_id
-            .send_message(&ctx, |m| {
-                m.add_file(AttachmentType::File {
-                    file: &img,
-                    filename: (&file_name).to_string(),
-                });
-                m.embed(|e| {
-                    e.0 = embed.0;
-
-                    e.description(format!("Successfully added '{}'", file_name))
-                        .attachment(file_name)
-                })
-            })
-            .await?,
-    )
-    .await
+    new_msg
+        .update_tmp(ctx, |m: &mut MessageCreator| {
+            m.title("Profile Picture Switcher")
+                .image(atch_url)
+                .content(format!("Successfully added '{}'", file_name))
+        })
+        .await
 }
 
 #[command]
@@ -308,22 +335,36 @@ async fn change(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let img_str = args.current().unwrap().to_string();
 
     if img_str.contains("../") || img_str.contains("//") {
-        return say_error(
-            ctx,
-            &msg.channel_id,
-            "File name contains disallowed characters",
-        )
-        .await;
+        return msg
+            .channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error()
+                    .title("Profile Picture Switcher")
+                    .content("File contains disallowed characters")
+            })
+            .await;
     }
 
     let path_str = format!("./pfps/{}", img_str);
     let path = Path::new(&path_str);
 
     if !path.exists() {
-        return say(ctx, &msg.channel_id, "Specified file does not exist").await;
+        return msg
+            .channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error()
+                    .title("Profile Picture Switcher")
+                    .content("Specified file does not exist")
+            })
+            .await;
     }
 
-    let new_msg = send_loading(ctx, &msg.channel_id, "Uploading image").await;
+    let mut new_msg = msg
+        .channel_id
+        .send_loading(ctx, "Profile Picture Switcher", "Uploading image")
+        .await
+        .unwrap();
+
     let mut user = ctx.cache.current_user().await;
     let avatar = read_image((&path_str).to_string())?;
 
@@ -333,32 +374,21 @@ async fn change(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
     println!("[PfpSwitcher] Changing pfps");
 
-    let img = File::open(path_str).await?;
+    let pfp_url = ctx
+        .http
+        .get_current_user()
+        .await
+        .unwrap()
+        .avatar_url()
+        .unwrap();
 
-    ctx.http
-        .delete_message(new_msg.channel_id.0, new_msg.id.0)
-        .await?;
-
-    let embed = default_embed("Profile Picture Switcher");
-    chat::delete(
-        ctx,
-        &new_msg
-            .channel_id
-            .send_message(&ctx, |m| {
-                m.add_file(AttachmentType::File {
-                    file: &img,
-                    filename: (&img_str).to_string(),
-                });
-                m.embed(|e| {
-                    e.0 = embed.0;
-
-                    e.description(&format!("Switched profile picture to `{}`", img_str))
-                        .attachment(img_str)
-                })
-            })
-            .await?,
-    )
-    .await
+    new_msg
+        .update_noret(ctx, |m: &mut MessageCreator| {
+            m.title("Profile Picture Switcher")
+                .content(format!("Switched profile picture to `{}`", img_str))
+                .image(pfp_url)
+        })
+        .await
 }
 
 #[command]
@@ -371,29 +401,38 @@ async fn delete(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let img_str = args.current().unwrap().to_string();
 
     if img_str.contains("../") || img_str.contains("//") {
-        return say_error(
-            ctx,
-            &msg.channel_id,
-            "File name contains disallowed characters",
-        )
-        .await;
+        return msg
+            .channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error()
+                    .title("Profile Picture Switcher")
+                    .content("File contains disallowed characters")
+            })
+            .await;
     }
 
     let path_str = format!("./pfps/{}", img_str);
     let path = Path::new(&path_str);
 
     if !path.exists() {
-        return say_error(ctx, &msg.channel_id, "Specified file does not exist").await;
+        return msg
+            .channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error()
+                    .title("Profile Picture Switcher")
+                    .content("Specified file does not exist")
+            })
+            .await;
     }
 
     remove_file(path)?;
 
-    say(
-        ctx,
-        &msg.channel_id,
-        &format!("Successfully removed '{}'", img_str),
-    )
-    .await
+    msg.channel_id
+        .send_tmp(ctx, |m: &mut MessageCreator| {
+            m.title("Profile Picture Switcher")
+                .content(format!("Successfully removed '{}'", img_str))
+        })
+        .await
 }
 
 #[command]
@@ -406,40 +445,41 @@ async fn view(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let img_str = args.current().unwrap().to_string();
 
     if img_str.contains("../") || img_str.contains("//") {
-        return say_error(
-            ctx,
-            &msg.channel_id,
-            "File name contains disallowed characters",
-        )
-        .await;
+        return msg
+            .channel_id
+            .send_tmp(ctx, |m| {
+                m.error()
+                    .title("Profile Picture Switcher")
+                    .content("File contains disallowed characters")
+            })
+            .await;
     }
 
     let path_str = format!("./pfps/{}", img_str);
 
     if !Path::new(&path_str).exists() {
-        return say_error(ctx, &msg.channel_id, "Specified file does not exist").await;
+        return msg
+            .channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error()
+                    .title("Profile Picture Switcher")
+                    .content("Specified file does not exist")
+            })
+            .await;
     }
 
     let img = File::open(path_str).await.unwrap();
 
-    let embed = default_embed("Profile Picture Switcher");
-    chat::delete(
-        ctx,
-        &msg.channel_id
-            .send_message(&ctx, |m| {
-                m.add_file(AttachmentType::File {
+    msg.channel_id
+        .send_tmp(ctx, |m: &mut MessageCreator| {
+            m.title("Profile Picture Switcher")
+                .content(img_str.clone())
+                .attachment(AttachmentType::File {
                     file: &img,
-                    filename: (&img_str).to_string(),
-                });
-                m.embed(|e| {
-                    e.0 = embed.0;
-
-                    e.description((&img_str).to_string()).attachment(img_str)
+                    filename: img_str.clone(),
                 })
-            })
-            .await?,
-    )
-    .await
+        })
+        .await
 }
 
 #[command]
@@ -461,8 +501,9 @@ async fn list(ctx: &Context, msg: &Message) -> CommandResult {
             list = format!("{}\n{}", list, img.file_name().into_string().unwrap());
         }
     }
-
-    say(ctx, &msg.channel_id, &list).await.unwrap();
-
-    Ok(())
+    msg.channel_id
+        .send_tmp(ctx, |m: &mut MessageCreator| {
+            m.title("Profile Picture Switcher").content(list)
+        })
+        .await
 }

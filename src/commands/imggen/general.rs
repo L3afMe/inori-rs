@@ -12,30 +12,25 @@ use serenity::{
 
 use crate::{
     models::commands::NekoBotResponse,
-    utils::{
-        chat::{default_embed, is_mention, say_error, send_loading},
-        user::get_av,
-    },
+    utils::{chat::is_mention, user::get_av},
+    InoriChannelUtils, InoriMessageUtils, MessageCreator,
 };
 
-async fn neko_bot(ctx: &Context, msg: &Message, url: &str, title: &str) {
-    let mut msg = send_loading(ctx, &msg.channel_id, title, "Generating image").await;
+async fn neko_bot(ctx: &Context, msg: &Message, url: &str, title: &str) -> CommandResult {
+    let mut msg = msg
+        .channel_id
+        .send_loading(ctx, title, "Generating image")
+        .await
+        .unwrap();
 
     let res = reqwest::get(url).await.unwrap().text().await.unwrap();
 
     let res = serde_json::from_str::<NekoBotResponse>(&res).expect("Couldn't parse response.");
 
-    let mut embed = default_embed(title);
-    embed.image(res.message);
-
-    msg.edit(&ctx, |m| {
-        m.embed(|e| {
-            e.0 = embed.0;
-            e
-        })
+    msg.update_noret(ctx, |m: &mut MessageCreator| {
+        m.title(title).image(res.message)
     })
     .await
-    .unwrap();
 }
 
 #[command]
@@ -53,9 +48,7 @@ async fn clyde(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         ),
         "Clyde",
     )
-    .await;
-
-    Ok(())
+    .await
 }
 
 #[command]
@@ -74,9 +67,7 @@ async fn kannagen(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         ),
         "Kanna Gen",
     )
-    .await;
-
-    Ok(())
+    .await
 }
 
 #[command]
@@ -95,13 +86,14 @@ async fn phcomment(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
         user = msg.mentions.get(0).unwrap();
 
         if message.len() == 0 {
-            return say_error(
-                ctx,
-                &msg.channel_id,
-                "PornHub Comment",
-                "You need to specify a message",
-            )
-            .await;
+            return msg
+                .channel_id
+                .send_tmp(ctx, |m: &mut MessageCreator| {
+                    m.error()
+                        .title("PornHub Comment")
+                        .content("No message specified")
+                })
+                .await;
         }
     } else {
         message = format!("{} {}", first_arg, message);
@@ -118,9 +110,7 @@ async fn phcomment(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
         ),
         "PornHub Comment",
     )
-    .await;
-
-    Ok(())
+    .await
 }
 
 #[command]
@@ -139,9 +129,7 @@ async fn trumptweet(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         ),
         "Trump Tweet",
     )
-    .await;
-
-    Ok(())
+    .await
 }
 
 #[command]
@@ -160,9 +148,7 @@ async fn changemymind(ctx: &Context, msg: &Message, args: Args) -> CommandResult
         ),
         "Change My Mind",
     )
-    .await;
-
-    Ok(())
+    .await
 }
 
 #[command]
@@ -171,7 +157,7 @@ async fn changemymind(ctx: &Context, msg: &Message, args: Args) -> CommandResult
 #[example("@L3af#0001")]
 async fn lolice(ctx: &Context, msg: &Message) -> CommandResult {
     if msg.mentions.is_empty() {
-        neko_bot(
+        let _ = neko_bot(
             ctx,
             msg,
             &format!(
@@ -183,7 +169,7 @@ async fn lolice(ctx: &Context, msg: &Message) -> CommandResult {
         .await;
     } else {
         for mention in &msg.mentions {
-            neko_bot(
+            let _ = neko_bot(
                 ctx,
                 msg,
                 &format!(
@@ -205,7 +191,7 @@ async fn lolice(ctx: &Context, msg: &Message) -> CommandResult {
 #[example("@L3af#0001")]
 async fn cutie(ctx: &Context, msg: &Message) -> CommandResult {
     if msg.mentions.is_empty() {
-        neko_bot(
+        let _ = neko_bot(
             ctx,
             msg,
             &format!(
@@ -217,7 +203,7 @@ async fn cutie(ctx: &Context, msg: &Message) -> CommandResult {
         .await;
     } else {
         for mention in &msg.mentions {
-            neko_bot(
+            let _ = neko_bot(
                 ctx,
                 msg,
                 &format!(

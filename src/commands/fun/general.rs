@@ -1,13 +1,22 @@
 use serenity::{
     framework::standard::{macros::command, Args, CommandResult},
-    model::{channel::Message, user::User},
-    prelude::*,
+    model::{channel::Message, id::ChannelId, user::User},
+    prelude::Context,
 };
 
-use crate::utils::chat::{default_embed, say_error, send, send_embed_paginator};
+use crate::{InoriChannelUtils, MessageCreator};
 
-async fn check_compat(ctx: &Context, msg: &Message, u1: &User, u2: &User) {
-    let compat = (u1.id.0 + u2.id.0) % 100;
+fn make_bar(percent: u64) -> String {
+    let mut bar = "[".to_string();
+    for i in 0..20 {
+        if i < (percent / 5) {
+            bar = format!("{}=", bar);
+        } else {
+            bar = format!("{}-", bar);
+        }
+    }
+
+    format!("{}]", bar)
 }
 
 #[command]
@@ -15,38 +24,57 @@ async fn check_compat(ctx: &Context, msg: &Message, u1: &User, u2: &User) {
 #[usage("[@user]")]
 #[example("@L3af#0001")]
 #[min_args(1)]
+#[max_args(2)]
 async fn compatibility(ctx: &Context, msg: &Message) -> CommandResult {
-    if msg.mentions.len(exi == 1 {
-        check_compat(
-            ctx,
-            msg,
-            &msg.author,
-            msg.mentions.get(0).unwrap_or(msg.author),
-        )
-        .await;
+    let mut user1 = &msg.author;
+    let user2;
+
+    if msg.mentions.len() == 1 {
+        user2 = msg.mentions.get(0).unwrap_or(&msg.author);
     } else {
-        for mention in &msg.mentions {
-            print_dick(ctx, msg, &mention).await;
-        }
+        user1 = msg.mentions.get(0).unwrap_or(&msg.author);
+        user2 = msg.mentions.get(1).unwrap_or(&msg.author);
     }
-    Ok(())
+
+    let compat = (user1.id.0 + user2.id.0) % 100;
+    let bar = make_bar(compat);
+    let shipnamep1 = user1.name[0..user1.name.len() / 2].to_string();
+    let shipnamep2 = user2.name[0..user2.name.len() / 2].to_string();
+    let shipname = format!("{}{}", shipnamep1, shipnamep2);
+
+    msg.channel_id
+        .send_noret(ctx, |m: &mut MessageCreator| {
+            m.title("Compatibility").content(format!(
+                "{} has {}% compatibility\n{}",
+                shipname, compat, bar
+            ))
+        })
+        .await
 }
 
-async fn print_dick(ctx: &Context, msg: &Message, user: &User) {
-    let len = (user.id.0 % 15) + 1;
-    let mut dick = "8".to_string();
-    for _ in 0..len {
-        dick = format!("{}=", dick);
-    }
-    dick = format!("{}D", dick);
+async fn print_dick(ctx: &Context, channel: &ChannelId, users: &Vec<User>) -> CommandResult {
+    let mut content = String::new();
 
-    send(
-        ctx,
-        &msg.channel_id,
-        "Dick",
-        &format!("{}'s dick size\n{}", user.name, dick),
-    )
-    .await;
+    for user in users {
+        let len = (user.id.0 % 15) + 1;
+        let mut dick = "8".to_string();
+        for _ in 0..len {
+            dick = format!("{}=", dick);
+        }
+        dick = format!("{}D", dick);
+
+        if content.len() == 0 {
+            content = format!("{}'s dick size\n{}", user.name, dick);
+        } else {
+            content = format!("{}\n\n{}'s dick size\n{}", content, user.name, dick);
+        }
+    }
+
+    channel
+        .send_noret(ctx, |m: &mut MessageCreator| {
+            m.title("Dick").content(content)
+        })
+        .await
 }
 
 #[command]
@@ -54,35 +82,36 @@ async fn print_dick(ctx: &Context, msg: &Message, user: &User) {
 #[usage("[@user]")]
 #[example("@L3af#0001")]
 async fn dick(ctx: &Context, msg: &Message) -> CommandResult {
+    let mut users = Vec::new();
+
     if msg.mentions.len() == 0 {
-        print_dick(ctx, msg, &msg.author).await;
+        users.push(msg.author.clone());
     } else {
-        for mention in &msg.mentions {
-            print_dick(ctx, msg, &mention).await;
-        }
+        users = msg.mentions.clone();
     }
-    Ok(())
+
+    print_dick(ctx, &msg.channel_id, &users).await
 }
 
-async fn print_sexuality(ctx: &Context, msg: &Message, user: &User) {
-    let len = user.id.0 % 100;
-    let mut bar = "[".to_string();
-    for i in 0..20 {
-        if i < (len / 5) {
-            bar = format!("{}=", bar);
+async fn print_sexuality(ctx: &Context, channel: &ChannelId, users: &Vec<User>) -> CommandResult {
+    let mut content = String::new();
+
+    for user in users {
+        let perc = user.id.0 % 100;
+        let bar = make_bar(perc);
+
+        if content.len() == 0 {
+            content = format!("{} is {}% gay\n{}", user.name, perc, bar);
         } else {
-            bar = format!("{}-", bar);
+            content = format!("{}\n\n{} is {}% gay\n{}", content, user.name, perc, bar);
         }
     }
-    bar = format!("{}]", bar);
 
-    send(
-        ctx,
-        &msg.channel_id,
-        "Sexuality",
-        &format!("{} is {}% gay\n{}", user.name, len, bar),
-    )
-    .await;
+    channel
+        .send_noret(ctx, |m: &mut MessageCreator| {
+            m.title("Sexuality").content(content)
+        })
+        .await
 }
 
 #[command]
@@ -91,14 +120,15 @@ async fn print_sexuality(ctx: &Context, msg: &Message, user: &User) {
 #[usage("[@user]")]
 #[example("@L3af#0001")]
 async fn sexuality(ctx: &Context, msg: &Message) -> CommandResult {
+    let mut users = Vec::new();
+
     if msg.mentions.len() == 0 {
-        print_sexuality(ctx, msg, &msg.author).await;
+        users.push(msg.author.clone());
     } else {
-        for mention in &msg.mentions {
-            print_sexuality(ctx, msg, &mention).await;
-        }
+        users = msg.mentions.clone();
     }
-    Ok(())
+
+    print_sexuality(ctx, &msg.channel_id, &users).await
 }
 
 #[command]
@@ -112,19 +142,26 @@ async fn urbandictionary(ctx: &Context, msg: &Message, args: Args) -> CommandRes
     let results = urban_rs::fetch_definition(&client, args.rest()).await?;
 
     return if results.is_empty() {
-        say_error(ctx, &msg.channel_id, "Urban Dictionary", "No results found").await
+        msg.channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.title("Urban Dictionary").content("No results found")
+            })
+            .await
     } else {
-        let mut embeds = Vec::new();
+        let mut msgs = Vec::new();
 
         for result in results {
-            let mut embed = default_embed("Urban Dictionary");
+            let mut msg = MessageCreator::default();
+            msg.title("Urban Dictionary").content(format!(
+                "**{}**\n{}",
+                result.word(),
+                result.definition()
+            ));
 
-            embed.description(format!("**{}**\n{}", result.word(), result.definition()));
-
-            embeds.push(embed);
+            msgs.push(msg);
         }
 
-        send_embed_paginator(ctx, msg, embeds).await
+        msg.channel_id.send_paginator_noret(ctx, msg, msgs).await
     };
 }
 
@@ -132,11 +169,10 @@ async fn urbandictionary(ctx: &Context, msg: &Message, args: Args) -> CommandRes
 #[aliases("bal")]
 #[description("Check your balance")]
 async fn balance(ctx: &Context, msg: &Message) -> CommandResult {
-    say_error(
-        ctx,
-        &msg.channel_id,
-        "Balance",
-        "You a broke ass nigga, don't even bother checking your bal",
-    )
-    .await
+    msg.channel_id
+        .send_tmp(ctx, |m: &mut MessageCreator| {
+            m.title("Balance")
+                .content("You a broke ass nigga, don't even bother checking your bal")
+        })
+        .await
 }

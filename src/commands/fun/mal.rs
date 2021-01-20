@@ -1,17 +1,16 @@
 use serenity::{
     framework::standard::{macros::command, Args, CommandResult},
-    model::prelude::*,
-    prelude::*,
+    model::prelude::Message,
+    prelude::Context,
 };
-
 use urlencoding::encode;
 
-use crate::{
-    models::commands::{
+use crate::models::{
+    commands::{
         MALAnimeSearchResult, MALCharacterSearchResult, MALMangaSearchResult,
         MALPersonSearchResult, MALSearchResponse,
     },
-    utils::chat::{default_embed, say_error, send_embed_paginator, send_loading},
+    discord::{InoriChannelUtils, MessageCreator},
 };
 
 #[command]
@@ -23,13 +22,13 @@ use crate::{
 #[sub_commands(anime, manga, character, actor)]
 #[min_args(1)]
 async fn myanimelist(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    say_error(
-        ctx,
-        &msg.channel_id,
-        "MyAnimeList",
-        &format!("Unknown subcommand: {}", args.current().unwrap()),
-    )
-    .await
+    msg.channel_id
+        .send_tmp(ctx, |m: &mut MessageCreator| {
+            m.error()
+                .title("MyAnimeList")
+                .content(format!("Unknown subcommand: {}", args.current().unwrap()))
+        })
+        .await
 }
 
 static BASE_URL: &str = "https://api.jikan.moe/v3/";
@@ -41,22 +40,22 @@ static BASE_URL: &str = "https://api.jikan.moe/v3/";
 async fn actor(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let params = args.rest();
     if params.len() < 3 {
-        return say_error(
-            ctx,
-            &msg.channel_id,
-            "MyAnimeList",
-            "Search queries must be 3 characters or longer",
-        )
-        .await;
+        return msg
+            .channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error()
+                    .title("MyAnimeList")
+                    .content("Search queries must be 3 characters or longer")
+            })
+            .await;
     }
 
-    let new_msg = send_loading(
-        ctx,
-        &msg.channel_id,
-        "MyAnimeList",
-        "Loading actor information",
-    )
-    .await;
+    let new_msg = msg
+        .channel_id
+        .send_loading(ctx, "MyAnimeList", "Loading actor information")
+        .await
+        .unwrap();
+
     let res = reqwest::get(&format!("{}search/person?q={}", BASE_URL, encode(&params)))
         .await?
         .text()
@@ -67,35 +66,35 @@ async fn actor(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     if res.results.len() == 0 {
         new_msg.delete(&ctx.http).await?;
 
-        return say_error(
-            ctx,
-            &msg.channel_id,
-            "MyAnimeList",
-            &format!("No results found for query: `{}`", params),
-        )
-        .await;
+        return msg
+            .channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error()
+                    .title("MyAnimeList")
+                    .content(&format!("No results found for query: `{}`", params))
+            })
+            .await;
     } else {
-        let mut embeds = Vec::new();
+        let mut msgs = Vec::new();
 
         for result in res.results {
-            let mut embed = default_embed("MyAnimeList");
-
-            embed
-                .thumbnail(&result.image_url)
-                .description(format!("[{}]({})", result.name, result.url));
+            let mut msg = MessageCreator::default();
+            msg.title("MyAnimeList")
+                .content(format!("[{}]({})", result.name, result.url))
+                .thumbnail(&result.image_url);
 
             if result.alternate_names.len() > 0 {
-                embed.field("Alternative Names", result.alternate_names.join("\n"), true);
+                msg.field("Alternative Names", result.alternate_names.join("\n"), true);
             }
 
-            embed.field("MAL ID", result.mal_id, true);
+            msg.field("MAL ID", result.mal_id, true);
 
-            embeds.push(embed);
+            msgs.push(msg);
         }
 
         new_msg.delete(&ctx.http).await?;
 
-        return send_embed_paginator(ctx, msg, embeds).await;
+        return msg.channel_id.send_paginator_noret(ctx, msg, msgs).await;
     }
 }
 
@@ -106,22 +105,22 @@ async fn actor(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 async fn character(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let params = args.rest();
     if params.len() < 3 {
-        return say_error(
-            ctx,
-            &msg.channel_id,
-            "MyAnimeList",
-            "Search queries must be 3 characters or longer",
-        )
-        .await;
+        return msg
+            .channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error()
+                    .title("MyAnimeList")
+                    .content("Search queries must be 3 characters or longer")
+            })
+            .await;
     }
 
-    let new_msg = send_loading(
-        ctx,
-        &msg.channel_id,
-        "MyAnimeList",
-        "Loading character information",
-    )
-    .await;
+    let new_msg = msg
+        .channel_id
+        .send_loading(ctx, "MyAnimeList", "Loading character information")
+        .await
+        .unwrap();
+
     let res = reqwest::get(&format!(
         "{}search/character?q={}",
         BASE_URL,
@@ -136,25 +135,25 @@ async fn character(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     if res.results.len() == 0 {
         new_msg.delete(&ctx.http).await?;
 
-        return say_error(
-            ctx,
-            &msg.channel_id,
-            "MyAnimeList",
-            &format!("No results found for query: `{}`", params),
-        )
-        .await;
+        return msg
+            .channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error()
+                    .title("MyAnimeList")
+                    .content(&format!("No results found for query: `{}`", params))
+            })
+            .await;
     } else {
-        let mut embeds = Vec::new();
+        let mut msgs = Vec::new();
 
         for result in res.results {
-            let mut embed = default_embed("MyAnimeList");
-
-            embed
+            let mut msg = MessageCreator::default();
+            msg.title("MyAnimeList")
                 .thumbnail(&result.image_url)
-                .description(format!("[{}]({})", result.name, result.url));
+                .content(format!("[{}]({})", result.name, result.url));
 
             if result.alternate_names.len() > 0 {
-                embed.field("Alternative Names", result.alternate_names.join("\n"), true);
+                msg.field("Alternative Names", result.alternate_names.join("\n"), true);
             }
 
             if result.anime.len() > 0 {
@@ -163,7 +162,8 @@ async fn character(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                     .iter()
                     .map(|e| format!("[{}]({}) ({})", e.name, e.url, e.mal_id))
                     .collect::<Vec<String>>();
-                embed.field("Anime", anime_list.join("\n"), true);
+
+                msg.field("Anime", anime_list.join("\n"), true);
             }
 
             if result.manga.len() > 0 {
@@ -172,17 +172,16 @@ async fn character(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                     .iter()
                     .map(|e| format!("[{}]({}) ({})", e.name, e.url, e.mal_id))
                     .collect::<Vec<String>>();
-                embed.field("Manga", manga_list.join("\n"), true);
+                msg.field("Manga", manga_list.join("\n"), true);
             }
+            msg.field("MAL ID", result.mal_id, true);
 
-            embed.field("MAL ID", result.mal_id, true);
-
-            embeds.push(embed);
+            msgs.push(msg);
         }
 
         new_msg.delete(&ctx.http).await?;
 
-        return send_embed_paginator(ctx, msg, embeds).await;
+        return msg.channel_id.send_paginator_noret(ctx, msg, msgs).await;
     }
 }
 
@@ -193,22 +192,22 @@ async fn character(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 async fn manga(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let params = args.rest();
     if params.len() < 3 {
-        return say_error(
-            ctx,
-            &msg.channel_id,
-            "MyAnimeList",
-            "Search queries must be 3 characters or longer",
-        )
-        .await;
+        return msg
+            .channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error()
+                    .title("MyAnimeList")
+                    .content("Search queries must be 3 characters or longer")
+            })
+            .await;
     }
 
-    let new_msg = send_loading(
-        ctx,
-        &msg.channel_id,
-        "MyAnimeList",
-        "Loading manga information",
-    )
-    .await;
+    let new_msg = msg
+        .channel_id
+        .send_loading(ctx, "MyAnimeList", "Loading manga information")
+        .await
+        .unwrap();
+
     let res = reqwest::get(&format!("{}search/manga?q={}", BASE_URL, encode(&params)))
         .await?
         .text()
@@ -219,22 +218,22 @@ async fn manga(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     if res.results.len() == 0 {
         new_msg.delete(&ctx.http).await?;
 
-        return say_error(
-            ctx,
-            &msg.channel_id,
-            "MyAnimeList",
-            &format!("No results found for query: `{}`", params),
-        )
-        .await;
+        return msg
+            .channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error()
+                    .title("MyAnimeList")
+                    .content(&format!("No results found for query: `{}`", params))
+            })
+            .await;
     } else {
-        let mut embeds = Vec::new();
+        let mut msgs = Vec::new();
 
         for result in res.results {
-            let mut embed = default_embed("MyAnimeList");
-
-            embed
+            let mut msg = MessageCreator::default();
+            msg.title("MyAnimeList")
                 .thumbnail(&result.image_url)
-                .description(format!(
+                .content(format!(
                     "**[{}]({})**\n{}",
                     result.title, result.url, result.synopsis
                 ))
@@ -246,12 +245,12 @@ async fn manga(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 .field("End Date", &result.end_date, true)
                 .field("MAL ID", result.mal_id, true);
 
-            embeds.push(embed);
+            msgs.push(msg);
         }
 
         new_msg.delete(&ctx.http).await?;
 
-        return send_embed_paginator(ctx, msg, embeds).await;
+        return msg.channel_id.send_paginator_noret(ctx, msg, msgs).await;
     }
 }
 
@@ -262,22 +261,21 @@ async fn manga(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 async fn anime(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let params = args.rest();
     if params.len() < 3 {
-        return say_error(
-            ctx,
-            &msg.channel_id,
-            "MyAnimeList",
-            "Search queries must be 3 characters or longer",
-        )
-        .await;
+        return msg
+            .channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error()
+                    .title("MyAnimeList")
+                    .content("Search queries must be 3 characters or longer")
+            })
+            .await;
     }
 
-    let new_msg = send_loading(
-        ctx,
-        &msg.channel_id,
-        "MyAnimeList",
-        "Loading anime information",
-    )
-    .await;
+    let new_msg = msg
+        .channel_id
+        .send_loading(ctx, "MyAnimeList", "Loading anime information")
+        .await
+        .unwrap();
 
     let res = reqwest::get(&format!("{}search/anime?q={}", BASE_URL, encode(&params)))
         .await?
@@ -289,22 +287,22 @@ async fn anime(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     if res.results.len() == 0 {
         new_msg.delete(&ctx.http).await?;
 
-        return say_error(
-            ctx,
-            &msg.channel_id,
-            "MyAnimeList",
-            &format!("No results found for query: `{}`", params),
-        )
-        .await;
+        return msg
+            .channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error()
+                    .title("MyAnimeList")
+                    .content(&format!("No results found for query: `{}`", params))
+            })
+            .await;
     } else {
-        let mut embeds = Vec::new();
+        let mut msgs = Vec::new();
 
         for result in res.results {
-            let mut embed = default_embed("MyAnimeList");
-
-            embed
+            let mut msg = MessageCreator::default();
+            msg.title("MyAnimeList")
                 .thumbnail(&result.image_url)
-                .description(format!(
+                .content(format!(
                     "**[{}]({})**\n{}",
                     result.title, result.url, result.synopsis
                 ))
@@ -316,11 +314,11 @@ async fn anime(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 .field("Rated", &result.rated, true)
                 .field("MAL ID", result.mal_id, true);
 
-            embeds.push(embed);
+            msgs.push(msg);
         }
 
         new_msg.delete(&ctx.http).await?;
 
-        return send_embed_paginator(ctx, msg, embeds).await;
+        return msg.channel_id.send_paginator_noret(ctx, msg, msgs).await;
     }
 }

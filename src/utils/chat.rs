@@ -1,17 +1,7 @@
-use serenity::{
-    builder::{CreateEmbed, CreateMessage},
-    framework::standard::CommandResult,
-    model::{channel::Message, id::ChannelId},
-    prelude::*,
-    utils::Colour,
-};
-
 use once_cell::sync::Lazy;
 use regex::Regex;
-use serenity_utils::menu::{Menu, MenuOptions};
-use tokio::time::{delay_for, Duration};
 
-use crate::{models::discord::Emote, utils::general::get_perms, Settings};
+use crate::models::discord::Emote;
 
 /*
  * Reminder if changing format that these
@@ -21,170 +11,10 @@ use crate::{models::discord::Emote, utils::general::get_perms, Settings};
  * Ping
  */
 
-pub fn default_embed(title: &str) -> CreateEmbed {
-    let mut embed = CreateEmbed::default();
-    embed.title(format!("[{}]", title)).colour(Colour::BLURPLE);
-
-    embed
-}
-
-pub fn default_error_embed(title: &str) -> CreateEmbed {
-    let mut embed = default_embed(title);
-    embed.colour(Colour::MEIBE_PINK);
-
-    embed
-}
-
-pub async fn say(ctx: &Context, channel: &ChannelId, title: &str, content: &str) -> CommandResult {
-    delete(ctx, &send(ctx, channel, title, content).await).await
-}
-
-pub async fn send(ctx: &Context, channel: &ChannelId, title: &str, content: &str) -> Message {
-    let t = crate::models::discord::MessageCreator::new("Test");
-    let perms = get_perms(ctx, channel).await;
-    return channel
-        .send_message(&ctx, |m| {
-            m.0 = t.to_embed();
-
-            if perms.embed_links() {
-                let embed = default_embed(title);
-                m.embed(|e| {
-                    e.0 = embed.0;
-                    e.description(content)
-                });
-            } else {
-                let content = format!("```ini\n[{}]\n{}```", title, content);
-
-                m.content(content);
-            }
-
-            m
-        })
-        .await
-        .unwrap();
-}
-
-pub async fn say_error(
-    ctx: &Context,
-    channel: &ChannelId,
-    title: &str,
-    content: &str,
-) -> CommandResult {
-    delete(ctx, &send_error(ctx, channel, title, content).await).await
-}
-
-pub async fn send_error(ctx: &Context, channel: &ChannelId, title: &str, content: &str) -> Message {
-    let embed = default_error_embed(title);
-    channel
-        .send_message(&ctx, |m| {
-            m.embed(|e| {
-                e.0 = embed.0;
-                e.description(format!("Error lol: {}", content))
-            })
-        })
-        .await
-        .unwrap()
-}
-
-pub async fn send_embed(ctx: &Context, channel: &ChannelId, embed: CreateEmbed) -> Message {
-    channel
-        .send_message(&ctx, |m| {
-            m.embed(|e| {
-                e.0 = embed.0;
-
-                e
-            })
-        })
-        .await
-        .unwrap()
-}
-
-pub async fn say_embed(ctx: &Context, channel: &ChannelId, embed: CreateEmbed) -> CommandResult {
-    delete(ctx, &send_embed(ctx, channel, embed).await).await
-}
-
-pub async fn send_loading(
-    ctx: &Context,
-    channel: &ChannelId,
-    title: &str,
-    loading_msg: &str,
-) -> Message {
-    channel
-        .send_message(&ctx, |m| {
-            m.embed(|e| {
-                e.title(format!("[{}]", title))
-                    .description(format!(
-                        "<a:discordloading:395769211517009930> {}...",
-                        loading_msg
-                    ))
-                    .colour(Colour::BLURPLE)
-            })
-        })
-        .await
-        .unwrap()
-}
-
-pub async fn delete(ctx: &Context, msg: &Message) -> CommandResult {
-    let ad_delay = {
-        let data = ctx.data.read().await;
-        let settings = data
-            .get::<Settings>()
-            .expect("Expected Setting in TypeMap.")
-            .lock()
-            .await;
-
-        if settings.autodelete.enabled {
-            Some(settings.autodelete.delay)
-        } else {
-            None
-        }
-    };
-
-    if let Some(delay) = ad_delay {
-        let ctx = ctx.clone();
-        let msg = msg.clone();
-
-        tokio::task::spawn(async move {
-            delay_for(Duration::from_secs(delay)).await;
-            let _ = ctx.http.delete_message(msg.channel_id.0, msg.id.0).await;
-        });
-    }
-
-    Ok(())
-}
-
-pub async fn send_embed_paginator(
-    ctx: &Context,
-    msg: &Message,
-    embeds: Vec<CreateEmbed>,
-) -> CommandResult {
-    let mut formatted_embeds = Vec::new();
-
-    for (idx, embed) in embeds.iter().enumerate() {
-        let mut msg = CreateMessage::default();
-
-        msg.embed(|e| {
-            let embed = embed.clone();
-
-            e.0 = embed.0;
-
-            e.colour(Colour::BLURPLE)
-                .footer(|f| f.text(format!("Page {} of {}", idx + 1, embeds.len())))
-        });
-
-        formatted_embeds.push(msg);
-    }
-
-    let menu = Menu::new(ctx, msg, &formatted_embeds[..], MenuOptions::default());
-    menu.run().await?;
-
-    Ok(())
-}
-
 static MENTION_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"<@!?\d{18}>").unwrap());
 static EMOTE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"<a?:[a-zA-Z0-9_]*?:\d{18}>").unwrap());
 static EMOTE_NAME_REGEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"[^<a:]{1,}[a-zA-Z0-9][^:]").unwrap());
+    Lazy::new(|| Regex::new(r"[^:]{0,}[a-zA-Z0-9][^:]").unwrap());
 static EMOTE_ID_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\d{18}").unwrap());
 
 pub fn is_mention(arg: &str) -> bool {
@@ -237,4 +67,69 @@ pub fn get_emotes(arg: &str) -> Vec<Emote> {
     }
 
     matches
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_mention() {
+        // Valid ID
+        assert_eq!(is_mention("<@779273941402255360>"), true);
+
+        // Too short
+        assert_eq!(is_mention("<@779241402255360>"), false);
+
+        // Too long
+        assert_eq!(is_mention("<@77924140225536012423234>"), false);
+
+        // Not an ID at all
+        assert_eq!(is_mention("This isn't an ID"), false);
+    }
+
+    #[test]
+    fn test_has_emotes() {
+        // Valid emote
+        assert_eq!(has_emotes("<:cccatgirl:800141155424927785>"), true);
+
+        // User ID
+        assert_eq!(has_emotes("<@779273941402255360>"), false);
+
+        // Random text
+        assert_eq!(has_emotes("I'm not an emote >:("), false);
+    }
+
+    #[test]
+    fn test_get_emotes() {
+        let emotes = get_emotes(
+            "<:cccatgirl:800141155424927785>\
+            <:cccatboy:800141190338707466>\
+            <:HUGERS:785150570591551491>
+            <a:z_:800797540739579924>",
+        );
+
+        // Valid length
+        assert_eq!(emotes.len(), 4);
+
+        // Not animated
+        assert_eq!(emotes.get(0).unwrap().animated, false);
+        assert_eq!(emotes.get(1).unwrap().animated, false);
+        assert_eq!(emotes.get(2).unwrap().animated, false);
+
+        // Animated
+        assert_eq!(emotes.get(3).unwrap().animated, true);
+
+        // Getting name
+        assert_eq!(emotes.get(0).unwrap().name, "cccatgirl");
+        assert_eq!(emotes.get(1).unwrap().name, "cccatboy");
+        assert_eq!(emotes.get(2).unwrap().name, "HUGERS");
+        assert_eq!(emotes.get(3).unwrap().name, "z_");
+
+        // Getting ID
+        assert_eq!(emotes.get(0).unwrap().id, 800141155424927785);
+        assert_eq!(emotes.get(1).unwrap().id, 800141190338707466);
+        assert_eq!(emotes.get(2).unwrap().id, 785150570591551491);
+        assert_eq!(emotes.get(3).unwrap().id, 800797540739579924);
+    }
 }

@@ -6,22 +6,20 @@ use serenity::{
 
 use once_cell::sync::Lazy;
 
-use crate::{
-    models::quotes::*,
-    utils::chat::{say_error, send, send_loading},
-};
+use crate::{models::quotes::*, InoriChannelUtils, InoriMessageUtils, MessageCreator};
 
 #[command]
 #[description("Get a random quote from several people like Chuck Norris, Donald Trump and Kanye")]
 #[sub_commands(kanyewest, donaldtrump, chucknorris)]
+#[min_args(1)]
 async fn quote(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    say_error(
-        ctx,
-        &msg.channel_id,
-        "Quote",
-        &format!("Unknown quoter: {}", args.rest()),
-    )
-    .await
+    msg.channel_id
+        .send_tmp(ctx, |m: &mut MessageCreator| {
+            m.error()
+                .title("Quote")
+                .content(format!("Unknown subcommand: {}", args.current().unwrap()))
+        })
+        .await
 }
 
 async fn get_result<T>(url: &str) -> Result<T, String>
@@ -49,32 +47,30 @@ where
 #[aliases("kanye")]
 #[description("Random Kanye West quotes")]
 async fn kanyewest(ctx: &Context, msg: &Message) -> CommandResult {
-    let new_msg = send_loading(ctx, &msg.channel_id, "Quote", "Loading quote").await;
+    let mut new_msg = msg
+        .channel_id
+        .send_loading(ctx, "Quote", "Loading quote")
+        .await
+        .unwrap();
     let res = get_result::<KanyeRestResponse>("https://api.kanye.rest").await;
 
-    if let Err(why) = new_msg.delete(&ctx.http).await {
-        println!("Error occured while deleting message: {:?}", why);
-    }
     return match res {
         Ok(result) => {
-            send(
-                ctx,
-                &msg.channel_id,
-                "Quote",
-                &format!("{}\n~ Kanye West", result.quote),
-            )
-            .await;
-
-            Ok(())
+            new_msg
+                .update_tmp(ctx, |m: &mut MessageCreator| {
+                    m.title("Quote")
+                        .content(format!("{}\n ~ Kanye West", result.quote))
+                })
+                .await
         }
         Err(why) => {
-            say_error(
-                ctx,
-                &msg.channel_id,
-                "Quote",
-                &format!("Error getting quote: {}", why),
-            )
-            .await
+            new_msg
+                .update_tmp(ctx, |m: &mut MessageCreator| {
+                    m.error()
+                        .title("Quote")
+                        .content(format!("Error getting quote: {}", why))
+                })
+                .await
         }
     };
 }
@@ -83,32 +79,30 @@ async fn kanyewest(ctx: &Context, msg: &Message) -> CommandResult {
 #[aliases("trump")]
 #[description("Random stupid shit Donald Trump has said")]
 async fn donaldtrump(ctx: &Context, msg: &Message) -> CommandResult {
-    let new_msg = send_loading(ctx, &msg.channel_id, "Quote", "Loading quote").await;
+    let mut new_msg = msg
+        .channel_id
+        .send_loading(ctx, "Quote", "Loading quote")
+        .await
+        .unwrap();
     let res = get_result::<TronaldDumpReponse>("https://api.tronalddump.io/random/quote").await;
 
-    if let Err(why) = new_msg.delete(&ctx.http).await {
-        println!("Error occured while deleting message: {:?}", why);
-    }
     return match res {
         Ok(result) => {
-            send(
-                ctx,
-                &msg.channel_id,
-                "Quote",
-                &format!("{}\n~ Donald Trump", result.value),
-            )
-            .await;
-
-            Ok(())
+            new_msg
+                .update_noret(ctx, |m: &mut MessageCreator| {
+                    m.title("Quote")
+                        .content(format!("{}\n ~ Donald Trump", result.value))
+                })
+                .await
         }
         Err(why) => {
-            say_error(
-                ctx,
-                &msg.channel_id,
-                "Quote",
-                &format!("Error getting quote: {}", why),
-            )
-            .await
+            new_msg
+                .update_tmp(ctx, |m: &mut MessageCreator| {
+                    m.error()
+                        .title("Quote")
+                        .content(format!("Error getting quote: {}", why))
+                })
+                .await
         }
     };
 }
@@ -143,7 +137,11 @@ static TAGS: Lazy<Vec<String>> = Lazy::new(|| {
 #[min_args(0)]
 #[max_args(1)]
 async fn chucknorris(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    let new_msg = send_loading(ctx, &msg.channel_id, "Quote", "Loading quote").await;
+    let mut new_msg = msg
+        .channel_id
+        .send_loading(ctx, "Quote", "Loading quote")
+        .await
+        .unwrap();
     let res = if args.len() == 0 {
         get_result::<ChuckNorrisIoResponse>("https://api.chucknorris.io/jokes/random").await
     } else {
@@ -155,43 +153,35 @@ async fn chucknorris(ctx: &Context, msg: &Message, args: Args) -> CommandResult 
             ))
             .await
         } else {
-            return say_error(
-                ctx,
-                &msg.channel_id,
-                "Quote",
-                &format!(
-                    "Invalid tag specified.\n\
-                    Valid tags: `{}`",
-                    TAGS.join("`, `")
-                ),
-            )
-            .await;
+            return new_msg
+                .update_tmp(ctx, |m: &mut MessageCreator| {
+                    m.error().title("Quote").content(format!(
+                        "Invalid tag specified.\n\
+                            Valid tags: `{}`",
+                        TAGS.join("`, `")
+                    ))
+                })
+                .await;
         }
     };
 
-    if let Err(why) = new_msg.delete(&ctx.http).await {
-        println!("Error occured while deleting message: {:?}", why);
-    }
     return match res {
         Ok(result) => {
-            send(
-                ctx,
-                &msg.channel_id,
-                "Quote",
-                &format!("{}\n~ Chuck Norris", result.value),
-            )
-            .await;
-
-            Ok(())
+            new_msg
+                .update_noret(ctx, |m: &mut MessageCreator| {
+                    m.title("Quote")
+                        .content(format!("{}\n ~ Chuck Norris", result.value))
+                })
+                .await
         }
         Err(why) => {
-            say_error(
-                ctx,
-                &msg.channel_id,
-                "Quote",
-                &format!("Error getting quote: {}", why),
-            )
-            .await
+            new_msg
+                .update_tmp(ctx, |m: &mut MessageCreator| {
+                    m.error()
+                        .title("Quote")
+                        .content(format!("Error getting quote: {}", why))
+                })
+                .await
         }
     };
 }

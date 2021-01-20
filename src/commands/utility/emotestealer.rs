@@ -1,26 +1,23 @@
+use rand::Rng;
 use serenity::{
-    builder::CreateMessage,
     framework::standard::{macros::command, CommandResult},
     model::prelude::*,
     prelude::*,
     utils::read_image,
 };
-
 use serenity_utils::menu::*;
-
-use rand::Rng;
-use std::sync::Arc;
 use tokio::{
     fs::{remove_file, File},
     prelude::*,
 };
 
+use std::sync::Arc;
+
 use crate::{
     save_settings,
-    utils::chat::{default_embed, delete, get_emotes, has_emotes, say, say_error, send_loading},
-    Settings,
+    utils::chat::{get_emotes, has_emotes},
+    InoriChannelUtils, InoriMessageUtils, MessageCreator, Settings,
 };
-
 #[command]
 #[aliases("s")]
 #[description("Set the server which emotes will be uploaded to")]
@@ -40,7 +37,13 @@ async fn server(ctx: &Context, msg: &Message) -> CommandResult {
     drop(settings);
     drop(data);
 
-    say(ctx, &msg.channel_id, "Emote Sniper", "Updated emote server").await
+    msg.channel_id
+        .send_tmp(ctx, |m: &mut MessageCreator| {
+            m.error()
+                .title("Emote Stealer")
+                .content("Updated emote server")
+        })
+        .await
 }
 
 #[command]
@@ -56,14 +59,14 @@ async fn emotestealer(ctx: &Context, msg: &Message) -> CommandResult {
         {
             msg
         } else {
-            say(
-                ctx,
-                &msg.channel_id,
-                "Emote Stealer",
-                "Couldn't get message (Known bug)",
-            )
-            .await?;
-            return Ok(());
+            return msg
+                .channel_id
+                .send_tmp(ctx, |m: &mut MessageCreator| {
+                    m.error()
+                        .title("Emote Stealer")
+                        .content("Couldn't get message (Known bug)")
+                })
+                .await;
         };
 
         let emotes = get_emotes(&msg.content);
@@ -104,8 +107,12 @@ async fn emotestealer(ctx: &Context, msg: &Message) -> CommandResult {
     };
 
     if emotes.is_empty() {
-        say_error(ctx, &msg.channel_id, "Emote Stealer", "No emotes found").await?;
-        return Ok(());
+        return msg
+            .channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error().title("Emote Stealer").content("No emotes found")
+            })
+            .await;
     }
 
     let controls = vec![
@@ -127,18 +134,14 @@ async fn emotestealer(ctx: &Context, msg: &Message) -> CommandResult {
         ),
     ];
 
-    let mut embeds = Vec::new();
-    for (idx, emote) in emotes.iter().enumerate() {
-        let mut embed = CreateMessage::default();
-        embed.embed(|e| {
-            e.0 = default_embed("Emote Stealer").0;
+    let mut msgs = Vec::new();
+    for emote in emotes {
+        let mut msg = MessageCreator::default();
+        msg.title("Emote Stealer")
+            .content(format!("**{}**", emote.name))
+            .image(emote.url);
 
-            e.description(format!("**{}**", emote.name))
-                .image(&emote.url)
-                .footer(|f| f.text(format!("Page {} of {}", idx + 1, emotes.len())))
-        });
-
-        embeds.push(embed);
+        msgs.push(msg);
     }
 
     let server_set = {
@@ -151,6 +154,7 @@ async fn emotestealer(ctx: &Context, msg: &Message) -> CommandResult {
 
         settings.emoteserver != 0
     };
+
     let options = if server_set {
         MenuOptions {
             controls,
@@ -160,21 +164,20 @@ async fn emotestealer(ctx: &Context, msg: &Message) -> CommandResult {
         MenuOptions::default()
     };
 
-    let menu = Menu::new(ctx, msg, &embeds[..], options);
-    menu.run().await?;
-
-    Ok(())
+    msg.channel_id
+        .send_paginatorwo_noret(ctx, msg, msgs, options)
+        .await
 }
 
 async fn save<'a>(menu: &mut Menu<'a>, _reaction: Reaction) {
-    let mut new_msg = send_loading(
-        menu.ctx,
-        &menu.msg.channel_id,
-        "Emote Stealer",
-        "Adding image",
-    )
-    .await;
-    let embed = &menu.pages[menu.options.page].0["embed"];
+    let mut new_msg = menu
+        .msg
+        .channel_id
+        .send_loading(menu.ctx, "Emote Stealer", "Adding image")
+        .await
+        .unwrap();
+
+    let embed = &menu.pages[menu.options.page].0["embed"].clone();
 
     let mut emote_url = embed["image"]["url"].to_string();
     emote_url = emote_url[1..emote_url.len() - 1].to_string();
@@ -183,66 +186,71 @@ async fn save<'a>(menu: &mut Menu<'a>, _reaction: Reaction) {
     emote_name = emote_name[3..emote_name.len() - 3].to_string();
 
     let url = emote_url.split("?").next().unwrap().to_string();
-    let ext = &url.to_string()[url.rfind(".").unwrap()..];
-
-    let img = reqwest::get(&emote_url)
-        .await
-        .unwrap()
-        .bytes()
-        .await
-        .unwrap();
-
-    let path_str = &format!(
+    let ext = url[url.rfind(".").unwrap()..].to_string();
+    let path_str = format!(
         "./tmp_{}.{}",
         rand::thread_rng().gen_range(100000000..999999999),
         ext
     );
-    let mut file = File::create(path_str.to_string()).await.unwrap();
-    file.write_all(&img).await.unwrap();
-    let emote_image = read_image(path_str.to_string()).unwrap();
 
-    let data = menu.ctx.data.read().await;
-    let settings = data
-        .get::<Settings>()
-        .expect("Expected Setting in TypeMap.")
-        .lock()
-        .await;
+    let ctx = menu.ctx.clone();
+    let msg = menu.msg.clone();
 
-    match GuildId(settings.emoteserver)
-        .create_emoji(&menu.ctx.http, &emote_name, &emote_image)
-        .await
-    {
-        Ok(_) => {}
-        Err(why) => {
-            return say_error(
-                &menu.ctx,
-                &menu.msg.channel_id,
-                "Emote Stealer",
-                &format!("Couldn't add new emote\nError: {:?}", why),
-            )
+    let _ = tokio::task::spawn(async move {
+        let img = reqwest::get(&emote_url)
             .await
-            .unwrap_or(());
+            .unwrap()
+            .bytes()
+            .await
+            .unwrap();
+
+        let mut file = File::create(path_str.to_string()).await.unwrap();
+        file.write_all(&img).await.unwrap();
+        let emote_image = read_image(path_str.to_string()).unwrap();
+
+        let data = ctx.data.read().await;
+        let settings = data
+            .get::<Settings>()
+            .expect("Expected Setting in TypeMap.")
+            .lock()
+            .await;
+
+        match GuildId(settings.emoteserver)
+            .create_emoji(&ctx.http, &emote_name, &emote_image)
+            .await
+        {
+            Ok(_) => {}
+            Err(why) => {
+                remove_file(path_str.to_string()).await.unwrap();
+
+                drop(settings);
+                drop(data);
+
+                let _ = msg
+                    .channel_id
+                    .send_tmp(&ctx, |m: &mut MessageCreator| {
+                        m.error()
+                            .title("Emote Stealer")
+                            .content(format!("Couldn't add new emote\nError: {:?}", why))
+                    })
+                    .await;
+
+                return;
+            }
         }
-    }
 
-    remove_file(path_str.to_string()).await.unwrap();
+        remove_file(path_str.to_string()).await.unwrap();
 
-    drop(settings);
-    drop(data);
+        drop(settings);
+        drop(data);
 
-    new_msg
-        .edit(&menu.ctx.http, |m| {
-            m.embed(|e| {
-                e.0 = default_embed("Emote Stealer").0;
-
-                e.description(format!("Added emote '{}'", emote_name))
+        let _ = new_msg
+            .update_tmp(&ctx, |m: &mut MessageCreator| {
+                m.title("Emote Creator")
+                    .title(format!("Added emote '{}'", emote_name))
                     .image(emote_url)
             })
-        })
-        .await
-        .unwrap();
-
-    delete(menu.ctx, &new_msg)
-        .await
-        .expect("Unable to delete message")
+            .await;
+    })
+    .await;
 }

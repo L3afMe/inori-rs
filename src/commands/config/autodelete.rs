@@ -1,18 +1,10 @@
 use serenity::{
     framework::standard::{macros::command, Args, CommandResult},
-    model::prelude::*,
-    prelude::*,
+    model::prelude::Message,
+    prelude::Context,
 };
 
-use crate::{save_settings, utils, Settings};
-
-async fn say(ctx: &Context, channel: &ChannelId, content: &str) -> CommandResult {
-    utils::chat::say(ctx, channel, "Auto Delete", content).await
-}
-
-async fn say_error(ctx: &Context, channel: &ChannelId, content: &str) -> CommandResult {
-    utils::chat::say_error(ctx, channel, "Auto Delete", content).await
-}
+use crate::{save_settings, InoriChannelUtils, MessageCreator, Settings};
 
 #[command]
 #[aliases("ad")]
@@ -23,12 +15,13 @@ async fn say_error(ctx: &Context, channel: &ChannelId, content: &str) -> Command
 #[min_args(1)]
 #[sub_commands(delay, enable, disable, toggle)]
 async fn autodelete(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    say_error(
-        ctx,
-        &msg.channel_id,
-        &format!("Unknown subcommand: {}", args.current().unwrap()),
-    )
-    .await
+    msg.channel_id
+        .send_tmp(ctx, |m: &mut MessageCreator| {
+            m.error()
+                .title("Auto Delete")
+                .content(&format!("Unknown subcommand: {}", args.current().unwrap()))
+        })
+        .await
 }
 
 #[command]
@@ -53,7 +46,12 @@ async fn toggle(ctx: &Context, msg: &Message) -> CommandResult {
 
     drop(settings);
     drop(data);
-    say(ctx, &msg.channel_id, content).await
+
+    msg.channel_id
+        .send_tmp(ctx, |m: &mut MessageCreator| {
+            m.title("Auto Delete").content(content)
+        })
+        .await
 }
 
 #[command]
@@ -76,7 +74,12 @@ async fn enable(ctx: &Context, msg: &Message) -> CommandResult {
 
     drop(settings);
     drop(data);
-    say(ctx, &msg.channel_id, content).await
+
+    msg.channel_id
+        .send_tmp(ctx, |m: &mut MessageCreator| {
+            m.title("Auto Delete").content(content)
+        })
+        .await
 }
 
 #[command]
@@ -99,7 +102,12 @@ async fn disable(ctx: &Context, msg: &Message) -> CommandResult {
 
     drop(settings);
     drop(data);
-    say(ctx, &msg.channel_id, content).await
+
+    msg.channel_id
+        .send_tmp(ctx, |m: &mut MessageCreator| {
+            m.title("Auto Delete").content(content)
+        })
+        .await
 }
 
 #[command]
@@ -131,10 +139,22 @@ async fn delay(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
         format!("Delay set to {} seconds", delay)
     } else {
-        return say_error(ctx, &msg.channel_id, "Unable to parse delay to number").await;
+        return msg
+            .channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error()
+                    .title("Auto Delete")
+                    .content("Unable to parse delay to number")
+            })
+            .await;
     };
 
     drop(settings);
     drop(data);
-    say(ctx, &msg.channel_id, &content).await
+
+    msg.channel_id
+        .send_tmp(ctx, |m: &mut MessageCreator| {
+            m.title("Auto Delete").content(content)
+        })
+        .await
 }

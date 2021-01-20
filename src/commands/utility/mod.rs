@@ -12,6 +12,7 @@ use serenity::framework::standard::macros::group;
 
 #[group]
 #[commands(
+    about,
     avatar,
     emotestealer,
     exchange,

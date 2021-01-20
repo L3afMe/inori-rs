@@ -13,6 +13,7 @@ use serenity::framework::standard::macros::group;
 #[group]
 #[commands(
     balance,
+    compatibility,
     dick,
     myanimelist,
     pfpswitcher,

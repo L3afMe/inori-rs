@@ -1,5 +1,8 @@
 use crate::{
-    models::{discord::BasicUser, settings::Settings},
+    models::{
+        discord::BasicUser,
+        settings::{AutoDeleteConfig, GiveawayConfig, PfpSwitcher, Settings, SlotBotConfig},
+    },
     try_or_msg,
     utils::consts::{AUTHOR_DISC, PROG_NAME},
 };
@@ -8,11 +11,12 @@ use tokio::io::{self, AsyncBufReadExt};
 
 use core::future::Future;
 use std::{
+    collections::HashMap,
     fs::File,
     io::{Read, Write},
 };
 
-pub async fn get_valid_input<T, F, Fut>(msg: &str, f: F) -> Option<T>
+pub async fn get_valid_input<T, D: ToString, F, Fut>(msg: D, f: F) -> Option<T>
 where
     F: Fn(String) -> Fut,
     Fut: Future<Output = Option<T>>,
@@ -21,7 +25,7 @@ where
 
     #[allow(while_true)]
     while true {
-        println!("\nPlease input {}", msg);
+        println!("\nPlease input {}", msg.to_string());
         print!("> ");
         std::io::stdout().flush().unwrap();
 
@@ -59,7 +63,7 @@ pub async fn setup_settings() -> Settings {
         PROG_NAME, AUTHOR_DISC
     );
 
-    let token = get_valid_input("your Discord token", async move |tkn: String| {
+    let user_token: String = get_valid_input("your Discord token", async move |tkn: String| {
         let res = reqwest::Client::new()
             .get("https://discord.com/api/v8/users/@me")
             .header("Authorization", &tkn)
@@ -98,18 +102,18 @@ pub async fn setup_settings() -> Settings {
     .await
     .unwrap_or("<TOKEN HERE>".to_string());
 
-    let prefix = get_valid_input(
+    let command_prefix = get_valid_input(
         "preferred prefix (Default: ~)",
         async move |prefix: String| Some(prefix),
     )
     .await
     .unwrap_or("~".to_string());
 
-    let global_nsfw_level = get_valid_input(
+    let global_nsfw_level: u8 = get_valid_input(
         "NSFW level for channels not marked as NSFW (Default: 1)\n\
-    0 - Strict filtering\n\
-    1 - Moderate filtering\n\
-    2 - Disable filtering",
+        0 - Strict filtering\n\
+        1 - Moderate filtering\n\
+        2 - Disable filtering",
         async move |level: String| {
             if let Ok(level) = level.parse::<u8>() {
                 if level <= 2 {
@@ -146,7 +150,289 @@ pub async fn setup_settings() -> Settings {
     .await
     .unwrap_or(true);
 
-    load_settings().unwrap()
+    let nitrosniper: bool = get_valid_input(
+        "if you would like to snipe nitro.\n\
+        1 - Enabled\n\
+        2 - Disabled",
+        async move |input: String| match input.parse::<u8>() {
+            Ok(op) => {
+                if op <= 2 && op >= 1 {
+                    Some(op == 1)
+                } else {
+                    None
+                }
+            }
+            Err(_) => None,
+        },
+    )
+    .await
+    .unwrap_or(false);
+
+    let send_embeds: bool = get_valid_input(
+        "if you would like to use rich embeds.\n\
+        1 - Enabled\n\
+        2 - Disabled",
+        async move |input: String| match input.parse::<u8>() {
+            Ok(op) => {
+                if op <= 2 && op >= 1 {
+                    Some(op == 1)
+                } else {
+                    None
+                }
+            }
+            Err(_) => None,
+        },
+    )
+    .await
+    .unwrap_or(false);
+
+    let slotbot_enabled: bool = get_valid_input(
+        "if you would like to snipe SlotBot wallet drops.\n\
+        1 - Enabled\n\
+        2 - Disabled",
+        async move |input: String| match input.parse::<u8>() {
+            Ok(op) => {
+                if op <= 2 && op >= 1 {
+                    Some(op == 1)
+                } else {
+                    None
+                }
+            }
+            Err(_) => None,
+        },
+    )
+    .await
+    .unwrap_or(false);
+
+    let slotbot_dynamic_prefix: bool = if slotbot_enabled {
+        get_valid_input(
+            "if you would like to use dymamix prefixes for SlotBot, this will make it slightly slower and only needs to be enabled if you're in a server which has changed the prefix.\n\
+            1 - Enabled\n\
+            2 - Disabled",
+            async move |input: String| match input.parse::<u8>() {
+                Ok(op) => {
+                    if op <= 2 && op >= 1 {
+                        Some(op == 1)
+                    } else {
+                        None
+                    }
+                }
+                Err(_) => None,
+            },
+        )
+        .await
+        .unwrap_or(false)
+    } else {
+        false
+    };
+
+    let slotbot_mode: u8 = if slotbot_enabled {
+        get_valid_input(
+            format!(
+                "the prefered snipe mode.\n\
+                0 - All servers\n\
+                1 - Whitelist; Only in specified servers ({}help slotbot whitelist)\n\
+                2 - Blacklist; Only not in specified servers ({}help slotbot blacklist)",
+                command_prefix, command_prefix
+            ),
+            async move |input: String| match input.parse::<u8>() {
+                Ok(op) => {
+                    if op <= 2 {
+                        Some(op)
+                    } else {
+                        None
+                    }
+                }
+                Err(_) => None,
+            },
+        )
+        .await
+        .unwrap_or(0)
+    } else {
+        0
+    };
+
+    let pfp_switcher_enabled: bool = get_valid_input(
+        format!(
+            "if you would like to enable profile picture switching ({}help pfpswitcher).\n\
+            1 - Enabled\n\
+            2 - Disabled",
+            command_prefix
+        ),
+        async move |input: String| match input.parse::<u8>() {
+            Ok(op) => {
+                if op <= 2 && op >= 1 {
+                    Some(op == 1)
+                } else {
+                    None
+                }
+            }
+            Err(_) => None,
+        },
+    )
+    .await
+    .unwrap_or(false);
+
+    let pfp_switcher_delay: u32 = if pfp_switcher_enabled {
+        get_valid_input(
+            "the delay in minutes between switching profile pictures, minimum of 10 minutes.",
+            async move |input: String| match input.parse::<u32>() {
+                Ok(op) => {
+                    if op >= 10 {
+                        Some(op)
+                    } else {
+                        None
+                    }
+                }
+                Err(_) => None,
+            },
+        )
+        .await
+        .unwrap_or(45)
+    } else {
+        45
+    };
+
+    let pfp_switcher_mode: u8 = if pfp_switcher_enabled {
+        get_valid_input(
+            "the prefered switching method.\n\
+            0 - Random\n\
+            1 - Alphabetical (Not currently implemented)",
+            async move |input: String| match input.parse::<u8>() {
+                Ok(op) => {
+                    if op <= 1 {
+                        Some(op)
+                    } else {
+                        None
+                    }
+                }
+                Err(_) => None,
+            },
+        )
+        .await
+        .unwrap_or(0)
+    } else {
+        0
+    };
+
+    let giveaway_enabled: bool = get_valid_input(
+        "if you would like to automatically join giveaways.\n\
+        1 - Enabled\n\
+        2 - Disabled",
+        async move |input: String| match input.parse::<u8>() {
+            Ok(op) => {
+                if op <= 2 && op >= 1 {
+                    Some(op == 1)
+                } else {
+                    None
+                }
+            }
+            Err(_) => None,
+        },
+    )
+    .await
+    .unwrap_or(false);
+
+    let giveaway_delay: u64 = if pfp_switcher_enabled {
+        get_valid_input(
+            "the delay in seconds before joining a giveaway.",
+            async move |input: String| match input.parse::<u64>() {
+                Ok(op) => Some(op),
+                Err(_) => None,
+            },
+        )
+        .await
+        .unwrap_or(120)
+    } else {
+        120
+    };
+
+    let autodelete_enabled: bool = get_valid_input(
+        "if you would like messages to automatically delete.\n\
+        1 - Enabled\n\
+        2 - Disabled",
+        async move |input: String| match input.parse::<u8>() {
+            Ok(op) => {
+                if op <= 2 && op >= 1 {
+                    Some(op == 1)
+                } else {
+                    None
+                }
+            }
+            Err(_) => None,
+        },
+    )
+    .await
+    .unwrap_or(false);
+
+    let autodelete_delay: u64 = if pfp_switcher_enabled {
+        get_valid_input(
+            "the delay in seconds before deleting bot messages. Note: this doesn't include messages like interations, tags, etc.",
+            async move |input: String| match input.parse::<u64>() {
+                Ok(op) => {
+                    if op >= 1 {
+                        Some(op)
+                    } else {
+                        None
+                    }
+                }
+                Err(_) => None,
+            },
+        )
+        .await
+        .unwrap_or(10)
+    } else {
+        10
+    };
+
+    let pfp_switcher: PfpSwitcher = PfpSwitcher {
+        enabled: pfp_switcher_enabled,
+        delay: pfp_switcher_delay,
+        mode: pfp_switcher_mode,
+    };
+
+    let giveaway: GiveawayConfig = GiveawayConfig {
+        enabled: giveaway_enabled,
+        delay: giveaway_delay,
+    };
+
+    let slotbot: SlotBotConfig = SlotBotConfig {
+        enabled: slotbot_enabled,
+        dynamic_prefix: slotbot_dynamic_prefix,
+        mode: slotbot_mode,
+        whitelisted_guilds: Vec::new(),
+        blacklisted_guilds: Vec::new(),
+    };
+
+    let autodelete: AutoDeleteConfig = AutoDeleteConfig {
+        enabled: autodelete_enabled,
+        delay: autodelete_delay,
+    };
+
+    let settings: Settings = Settings {
+        user_token,
+        command_prefix,
+        global_nsfw_level,
+        is_male,
+        send_embeds,
+        emoteserver: 0,
+        nitrosniper,
+        pfp_switcher,
+        giveaway,
+        autodelete,
+        slotbot,
+        tags: HashMap::new(),
+    };
+
+    match _save_settings(&settings) {
+        Ok(_) => {
+            println!("[Config] Config setup and ready to use");
+            return settings;
+        }
+        Err(why) => {
+            panic!("[Config] Error while saving config: {}", why);
+        }
+    };
 }
 
 pub fn load_settings() -> Result<Settings, String> {
@@ -186,9 +472,9 @@ pub fn load_settings() -> Result<Settings, String> {
         ));
     }
 
-    let res = match toml::from_str(&contents) {
+    let res: Settings = match toml::from_str(&contents) {
         Ok(res) => res,
-        Err(why) => return Err(format!("Unable to deserialize settings.\n[Config] {}", why)),
+        Err(why) => return Err(format!("Unable to deserialize settings.\nError {}", why)),
     };
 
     println!("[Config] Load successful");
@@ -196,7 +482,14 @@ pub fn load_settings() -> Result<Settings, String> {
     Ok(res)
 }
 
-pub fn save_settings(settings: &Settings) -> Result<(), String> {
+pub fn save_settings(settings: &Settings) {
+    match _save_settings(settings) {
+        Ok(_) => {}
+        Err(err) => println!("[Config] Error while saving config: {}", err),
+    }
+}
+
+pub fn _save_settings(settings: &Settings) -> Result<(), String> {
     let contents = try_or_msg!(
         toml::to_string(settings),
         "Unable to serialize config".to_string()

@@ -5,6 +5,12 @@ mod models;
 mod settings;
 mod utils;
 
+use commands::*;
+use models::settings::Settings;
+use once_cell::sync::Lazy;
+use rand::Rng;
+use regex::Regex;
+use reqwest::StatusCode;
 use serenity::{
     async_trait,
     framework::standard::{
@@ -21,6 +27,10 @@ use serenity::{
     prelude::*,
     utils::read_image,
 };
+use tokio::{
+    task,
+    time::{delay_for, Duration},
+};
 
 use std::{
     collections::{HashMap, HashSet},
@@ -30,22 +40,11 @@ use std::{
     sync::Arc,
 };
 
-use commands::*;
-use models::settings::Settings;
-use settings::{load_settings, save_settings, setup_settings};
-use utils::chat::say_error;
-
-use once_cell::sync::Lazy;
-use regex::Regex;
-use reqwest::StatusCode;
-use tokio::{
-    task,
-    time::{delay_for, Duration},
+use models::{
+    commands::{CommandCounter, ShardManagerContainer},
+    discord::{InoriChannelUtils, InoriMessageUtils, MessageCreator},
 };
-
-use crate::models::commands::{CommandCounter, ShardManagerContainer};
-
-use rand::Rng;
+use settings::{_save_settings, load_settings, save_settings, setup_settings};
 
 struct Handler;
 
@@ -124,12 +123,12 @@ async fn before(ctx: &Context, msg: &Message, command_name: &str) -> bool {
 }
 
 #[hook]
-async fn after(ctx: &Context, msg: &Message, command_name: &str, command_result: CommandResult) {
+async fn after(ctx: &Context, msg: &Message, command_name: &str, res: CommandResult) {
     if msg.attachments.len() != 0 {
         msg.delete(&ctx.http).await.unwrap();
     }
 
-    match command_result {
+    match res {
         Ok(()) => println!("[Command] Finished running '{}'", command_name),
         Err(why) => println!(
             "[Command] Finishing running '{}' with error {:?}",
@@ -333,9 +332,13 @@ async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
     match error {
         DispatchError::Ratelimited(duration) => {
             let content = format!("Try this again in {} seconds.", duration.as_secs());
-            say_error(ctx, &msg.channel_id, "Ratelimit", &content)
-                .await
-                .unwrap();
+            println!("[Error] Ratelimit, {}", content);
+            let _ = msg
+                .channel_id
+                .send_tmp(ctx, |m: &mut MessageCreator| {
+                    m.error().title("Ratelimit").content(content)
+                })
+                .await;
         }
 
         DispatchError::CheckFailed(_, reason) => {
@@ -353,49 +356,51 @@ async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
                                 .to_string()
                         }
                         _ => {
-                            format!(
+                            let content = format!(
                                 "Undocumted error, please report this to L3af#0001\nError: `{:?}``",
                                 err
-                            )
+                            );
+
+                            println!("{}", content);
+                            content
                         }
                     };
 
-                    say_error(ctx, &msg.channel_id, "Error", &content)
-                        .await
-                        .unwrap();
+                    let _ = msg
+                        .channel_id
+                        .send_tmp(ctx, |m: &mut MessageCreator| {
+                            m.error().title("Error").content(content)
+                        })
+                        .await;
                 }
                 _ => (),
             };
         }
 
         DispatchError::TooManyArguments { max, given } => {
-            say_error(
-                ctx,
-                &msg.channel_id,
-                "Error",
-                &format!(
-                    "Too many args given!\n\
-                    Maximum: {}, Given: {}",
-                    max, given
-                ),
-            )
-            .await
-            .unwrap();
+            let _ = msg
+                .channel_id
+                .send_tmp(ctx, |m: &mut MessageCreator| {
+                    m.error().title("Error").content(&format!(
+                        "Too many args given!\n\
+                        Maximum: {}, Given: {}",
+                        max, given
+                    ))
+                })
+                .await;
         }
 
         DispatchError::NotEnoughArguments { min, given } => {
-            say_error(
-                ctx,
-                &msg.channel_id,
-                "Error",
-                &format!(
-                    "Too few args given!\n\
-                    Minimum: {}, Given: {}",
-                    min, given
-                ),
-            )
-            .await
-            .unwrap();
+            let _ = msg
+                .channel_id
+                .send_tmp(ctx, |m: &mut MessageCreator| {
+                    m.error().title("Error").content(&format!(
+                        "To few args given!\n\
+                        Minimum: {}, Given: {}",
+                        min, given
+                    ))
+                })
+                .await;
         }
 
         _ => {

@@ -4,11 +4,7 @@ use serenity::{
     prelude::*,
 };
 
-use crate::{
-    save_settings,
-    utils::chat::{say, say_error},
-    Settings,
-};
+use crate::{save_settings, InoriChannelUtils, MessageCreator, Settings};
 
 #[command]
 #[description("Set the prefix of the bot")]
@@ -34,7 +30,12 @@ async fn prefix(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
     drop(settings);
     drop(data);
-    say(ctx, &msg.channel_id, "Prefix", content).await
+
+    msg.channel_id
+        .send_tmp(ctx, |m: &mut MessageCreator| {
+            m.title("Prefix").content(content)
+        })
+        .await
 }
 
 #[command]
@@ -85,24 +86,29 @@ async fn nsfwfilter(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
 
                 format!("Filter level set to `{}`", level)
             } else {
-                return say_error(
-                    ctx,
-                    &msg.channel_id,
-                    "NSFW Filter",
-                    "Invalid level specified.\n\
-                    **Valid levels**\n\
-                    `0` - Strict\n\
-                    `1` - Moderate\n\
-                    `2` - Disabled",
-                )
-                .await;
+                return msg
+                    .channel_id
+                    .send_tmp(ctx, |m: &mut MessageCreator| {
+                        m.error().title("NSFW Filter").content(
+                            "Invalid level specified.\n\
+                            **Valid levels**\n\
+                            `0` - Strict\n\
+                            `1` - Moderate\n\
+                            `2` - Disabled",
+                        )
+                    })
+                    .await;
             }
         } else {
             "Unable to parse level".to_string()
         }
     };
 
-    say(ctx, &msg.channel_id, "NSFW Filter", &content).await
+    msg.channel_id
+        .send_tmp(ctx, |m: &mut MessageCreator| {
+            m.error().title("NSFW Filter").content(content)
+        })
+        .await
 }
 
 #[command]
@@ -113,19 +119,11 @@ async fn nsfwfilter(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
 #[example("winmessage Hey, I won the giveway but I'm out rn. Can I redeem it when I get home?")]
 #[min_args(1)]
 async fn giveaway(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    say_error(
-        ctx,
-        &msg.channel_id,
-        "Giveaway",
-        &format!("Unknown subcommand: {}", args.current().unwrap()),
-    )
-    .await?;
-
-    say(
-        ctx,
-        &msg.channel_id,
-        "Giveaway",
-        "Command not implemented yet",
-    )
-    .await
+    msg.channel_id
+        .send_tmp(ctx, |m: &mut MessageCreator| {
+            m.error()
+                .title("Giveaway")
+                .title(&format!("Unknown subcommand: {}", args.current().unwrap()))
+        })
+        .await
 }
