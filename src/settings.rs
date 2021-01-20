@@ -39,7 +39,8 @@ where
         println!("Invalid input specified, please try again");
     }
 
-    // This should never happen but it makes the compiler happy
+    // This should never happen but it makes the
+    // compiler happy
     None
 }
 
@@ -373,6 +374,9 @@ pub async fn setup_settings() -> Settings {
         delay:   autodelete_delay,
     };
 
+    // Clone prefix so we can use in the message below
+    // after it's been moved into the config
+    let prefix = command_prefix.clone();
     let settings: Settings = Settings {
         user_token,
         command_prefix,
@@ -392,7 +396,12 @@ pub async fn setup_settings() -> Settings {
         panic!("[Config] Error while saving config: {}", why);
     }
 
-    println!("[Config] Config setup and ready to use");
+    println!(
+        "[Config] Config setup and ready to use\n[Bot] Make sure to run {}setup which will create an new server and \
+         add emotes that are used throughout the bot",
+        prefix
+    );
+
     return settings;
 }
 pub fn load_settings() -> Result<Settings, String> {
