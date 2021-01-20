@@ -1,4 +1,4 @@
-# Inori-rs - A Rust Selfbot using [Serenity-rs](github.com/serenity-rs/serenity/)
+# Inori-rs - A Rust Selfbot using [Serenity-rs](https://github.com/serenity-rs/serenity/)
 ![License](https://img.shields.io/github/license/L3afMe/Inori-rs?style=for-the-badge)
 ![Latest release](https://img.shields.io/github/v/release/L3afMe/Inori-rs?include_prereleases&style=for-the-badge)
 ![GitHub Workflow Status](https://img.shields.io/github/workflow/status/L3afMe/Inori-rs/Rust%20Checker?style=for-the-badge)
@@ -33,7 +33,7 @@ How to build
 
 ## Contributing
 
-Pull requests for bug fixes and new features are more than welcomed but please ensure that you have the latest nightly RustFmt installed and have formatted your code before submitting.
+Pull requests for bug fixes and new features are more than welcomed but please ensure that you have the latest RustFmt (built from source) installed and have formatted your code before submitting.
 
 P.S. PRs for spelling and grammar mistakes are more than welcome!
 
