@@ -21,6 +21,7 @@ fn make_bar(percent: u64) -> String {
 }
 
 #[command]
+#[aliases("ship")]
 #[description("Check compatability between two people")]
 #[usage("[@user]")]
 #[example("@L3af#0001")]
@@ -40,7 +41,7 @@ async fn compatibility(ctx: &Context, msg: &Message) -> CommandResult {
     let compat = (user1.id.0 + user2.id.0) % 100;
     let bar = make_bar(compat);
     let shipnamep1 = user1.name[0..user1.name.len() / 2].to_string();
-    let shipnamep2 = user2.name[0..user2.name.len() / 2].to_string();
+    let shipnamep2 = user2.name[user2.name.len() / 2..].to_string();
     let shipname = format!("{}{}", shipnamep1, shipnamep2);
 
     msg.channel_id
