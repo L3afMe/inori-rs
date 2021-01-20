@@ -54,26 +54,21 @@ jobs:
         command: test
         args: --verbose
 
-  format:
-    name: Checking format
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v2
-    - name: Install latest nightly
-      uses: actions-rs/toolchain@v1
-      with:
-          toolchain: nightly
-          override: true
-
-    - name: Install latest RustFmt
-      uses: actions-rs/cargo@v1
-      with:
-        command: component
-        args: add rustfmt --toolchain nightly
-
-    - name: Run format check
-      uses: actions-rs/cargo@v1
-      with:
-        command: fmt
-        args: -- --check
+#  format:
+#    name: Checking format
+#    runs-on: ubuntu-latest
+#
+#    steps:
+#    - uses: actions/checkout@v2
+#    - name: Install latest nightly
+#      uses: actions-rs/toolchain@v1
+#      with:
+#          toolchain: nightly
+#          override: true
+#          components: rustfmt
+#
+#    - name: Run format check
+#      uses: actions-rs/cargo@v1
+#      with:
+#        command: fmt
+#        args: -- --check
