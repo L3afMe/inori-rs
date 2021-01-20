@@ -463,7 +463,9 @@ async fn main() {
         .group(&IMAGEGEN_GROUP)
         .group(&INTERACTIONS_GROUP)
         .group(&CONFIG_GROUP)
-        .group(&UTILITY_GROUP);
+        .group(&MISCELLANEOUS_GROUP)
+        .group(&UTILITY_GROUP)
+        .group(&MODERATION_GROUP);
 
     println!("[Bot] Configured framework");
 
