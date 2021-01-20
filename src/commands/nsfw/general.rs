@@ -1,6 +1,5 @@
 extern crate serde;
 extern crate serde_xml_rs;
-
 use once_cell::sync::Lazy;
 use rand::Rng;
 use serenity::{
@@ -38,7 +37,6 @@ async fn get_rule_34_posts(tags: String) -> Rule34Posts {
 #[example("catgirl thighs")]
 #[checks(NSFW_Strict)]
 #[min_args(1)]
-
 async fn rule34(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let mut new_msg = msg
         .channel_id
@@ -46,8 +44,7 @@ async fn rule34(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         .await
         .unwrap();
 
-    let tags = args.rest().split(" ").collect::<Vec<&str>>();
-
+    let tags = args.rest().split(' ').collect::<Vec<&str>>();
     let res = get_rule_34_posts(tags.join("+")).await;
 
     let posts: Vec<Rule34Post> = if let Some(posts) = res.posts {
@@ -161,7 +158,6 @@ static VALID_IMAGES: Lazy<Vec<Img>> = Lazy::new(|| {
 
 async fn do_image(ctx: &Context, msg: &Message, img: &Img, amount: u64, is_image_bomb: bool) -> CommandResult {
     let title = if is_image_bomb { "Image Bomb" } else { "Image" };
-
     let image_str = if amount > 1 { "images" } else { "image" };
 
     let mut new_msg = msg
@@ -171,7 +167,6 @@ async fn do_image(ctx: &Context, msg: &Message, img: &Img, amount: u64, is_image
         .unwrap();
 
     let mut urls = Vec::new();
-
     for _ in 0..amount {
         let url = match img.website_type {
             0 => {
@@ -227,11 +222,10 @@ async fn do_image(ctx: &Context, msg: &Message, img: &Img, amount: u64, is_image
 
 #[command]
 #[aliases("imgb", "imageb")]
-#[description("Get's an image a specified amount of times")]
+#[description("Gets an image a specified amount of times")]
 #[usage("<type> <amount>")]
 #[example("erok 10")]
 #[max_args(2)]
-
 async fn imagebomb(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let valid_ids = VALID_IMAGES.iter().map(|s| String::from(&s.link)).collect::<Vec<String>>();
 
@@ -262,19 +256,18 @@ async fn imagebomb(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
         };
 
         if valid_ids.contains(&arg) {
-            let selected: &Img = VALID_IMAGES.iter().filter(|&s| s.link.eq(&arg)).next().unwrap();
+            let selected: &Img = VALID_IMAGES.iter().find(|&s| s.link.eq(&arg)).unwrap();
 
             let is_too_nsfw = match selected.level {
                 0 => false,
-                1 => match can_nsfw_moderate(ctx, msg).await {
-                    serenity::framework::standard::CheckResult::Success => false,
-                    _ => true,
-                },
-                2 => match can_nsfw_strict(ctx, msg).await {
-                    serenity::framework::standard::CheckResult::Success => false,
-                    _ => true,
-                },
-                _ => false,
+                1 => !matches!(
+                    can_nsfw_moderate(ctx, msg).await,
+                    serenity::framework::standard::CheckResult::Success
+                ),
+                _ => !matches!(
+                    can_nsfw_strict(ctx, msg).await,
+                    serenity::framework::standard::CheckResult::Success
+                ),
             };
 
             if is_too_nsfw {
@@ -323,7 +316,6 @@ async fn imagebomb(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
 #[usage("<type>")]
 #[example("erok")]
 #[max_args(1)]
-
 async fn image(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let valid_ids = VALID_IMAGES.iter().map(|s| String::from(&s.link)).collect::<Vec<String>>();
 
@@ -331,19 +323,18 @@ async fn image(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         let arg = args.current().unwrap().to_lowercase();
 
         if valid_ids.contains(&arg) {
-            let selected: &Img = VALID_IMAGES.iter().filter(|&s| s.link.eq(&arg)).next().unwrap();
+            let selected: &Img = VALID_IMAGES.iter().find(|&s| s.link.eq(&arg)).unwrap();
 
             let is_too_nsfw = match selected.level {
                 0 => false,
-                1 => match can_nsfw_moderate(ctx, msg).await {
-                    serenity::framework::standard::CheckResult::Success => false,
-                    _ => true,
-                },
-                2 => match can_nsfw_strict(ctx, msg).await {
-                    serenity::framework::standard::CheckResult::Success => false,
-                    _ => true,
-                },
-                _ => false,
+                1 => !matches!(
+                    can_nsfw_moderate(ctx, msg).await,
+                    serenity::framework::standard::CheckResult::Success
+                ),
+                _ => !matches!(
+                    can_nsfw_strict(ctx, msg).await,
+                    serenity::framework::standard::CheckResult::Success
+                ),
             };
 
             if is_too_nsfw {

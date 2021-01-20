@@ -1,11 +1,8 @@
 #![feature(async_closure)]
-
 mod commands;
-
 mod models;
 mod settings;
 mod utils;
-
 use std::{
     collections::{HashMap, HashSet},
     fs::DirEntry,
@@ -52,7 +49,6 @@ use crate::{
 struct Handler;
 
 #[async_trait]
-
 impl EventHandler for Handler {
     async fn ready(&self, ctx: Context, ready: Ready) {
         println!(
@@ -85,7 +81,6 @@ impl EventHandler for Handler {
 )]
 #[embed_error_colour(MEIBE_PINK)]
 #[embed_success_colour(BLURPLE)]
-
 async fn help(
     context: &Context,
     msg: &Message,
@@ -100,7 +95,6 @@ async fn help(
 }
 
 #[hook]
-
 async fn before(ctx: &Context, msg: &Message, command_name: &str) -> bool {
     let amatch = msg
         .author
@@ -110,11 +104,8 @@ async fn before(ctx: &Context, msg: &Message, command_name: &str) -> bool {
 
     if amatch {
         let mut data = ctx.data.write().await;
-
         let counter = data.get_mut::<CommandCounter>().expect("Expected CommandCounter in TypeMap.");
-
         let entry = counter.entry(command_name.to_string()).or_insert(0);
-
         *entry += 1;
 
         if msg.attachments.is_empty() {
@@ -128,7 +119,6 @@ async fn before(ctx: &Context, msg: &Message, command_name: &str) -> bool {
 }
 
 #[hook]
-
 async fn after(ctx: &Context, msg: &Message, command_name: &str, res: CommandResult) {
     if !msg.attachments.is_empty() {
         msg.delete(&ctx.http).await.unwrap();
@@ -143,11 +133,9 @@ async fn after(ctx: &Context, msg: &Message, command_name: &str, res: CommandRes
 static NITRO_REGEX: Lazy<Regex> = Lazy::new(|| {
     Regex::new("(discord.com/gifts/|discordapp.com/gifts/|discord.gift/)[ ]*([a-zA-Z0-9]{16,24})").unwrap()
 });
-
 static SLOTBOT_PREFIX_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"`.*grab`").unwrap());
 
 #[hook]
-
 async fn normal_message(ctx: &Context, msg: &Message) {
     if let Some(code) = NITRO_REGEX.captures(&msg.content) {
         let code = code.get(2).unwrap().as_str();
@@ -175,7 +163,12 @@ async fn normal_message(ctx: &Context, msg: &Message) {
                             _ => "Unknown".to_string(),
                         };
 
-                        let guild_name = msg.guild_id.unwrap().name(&ctx.cache).await.unwrap_or("Unknown".to_string());
+                        let guild_name = msg
+                            .guild_id
+                            .unwrap()
+                            .name(&ctx.cache)
+                            .await
+                            .unwrap_or_else(|| "Unknown".to_string());
 
                         println!(
                             "[Sniper] Successfully sniped nitro in [{} > {}] from {}#{}",
@@ -211,9 +204,7 @@ async fn normal_message(ctx: &Context, msg: &Message) {
     {
         let config = {
             let data = ctx.data.read().await;
-
             let settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
-
             settings.slotbot.clone()
         };
 
@@ -257,7 +248,7 @@ async fn normal_message(ctx: &Context, msg: &Message) {
             _ => "Unknown".to_string(),
         };
 
-        let guild_name = guild_id.name(&ctx.cache).await.unwrap_or("Unknown".to_string());
+        let guild_name = guild_id.name(&ctx.cache).await.unwrap_or_else(|| "Unknown".to_string());
 
         let sniped_msg = if sniped {
             format!("Sent message in [{} > {}]", guild_name, channel_name)
@@ -277,9 +268,7 @@ async fn normal_message(ctx: &Context, msg: &Message) {
     {
         let config = {
             let data = ctx.data.read().await;
-
             let settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
-
             settings.giveaway.clone()
         };
 
@@ -293,7 +282,12 @@ async fn normal_message(ctx: &Context, msg: &Message) {
         };
 
         // Check if it's a guild above so unwrap() will never throw error
-        let guild_name = msg.guild_id.unwrap().name(&ctx.cache).await.unwrap_or("Unknown".to_string());
+        let guild_name = msg
+            .guild_id
+            .unwrap()
+            .name(&ctx.cache)
+            .await
+            .unwrap_or_else(|| "Unknown".to_string());
 
         println!(
             "[Giveaway] Detected giveaway in [{} > {}] waiting {} seconds",
@@ -301,15 +295,12 @@ async fn normal_message(ctx: &Context, msg: &Message) {
         );
 
         tokio::time::delay_for(tokio::time::Duration::from_secs(config.delay)).await;
-
         msg.react(&ctx.http, ReactionType::Unicode("🎉".to_string())).await.unwrap();
-
         println!("[Giveaway] Joined giveaway");
     }
 }
 
 #[hook]
-
 async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
     ctx.http.delete_message(msg.channel_id.0, msg.id.0).await.unwrap();
 
@@ -318,7 +309,6 @@ async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
             let content = format!("Try this again in {} seconds.", duration.as_secs());
 
             println!("[Error] Ratelimit, {}", content);
-
             let _ = msg
                 .channel_id
                 .send_tmp(ctx, |m: &mut MessageCreator| m.error().title("Ratelimit").content(content))
@@ -328,15 +318,14 @@ async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
         DispatchError::CheckFailed(_, reason) => {
             if let Reason::User(err) = reason {
                 let content = match err.as_ref() {
-                    "nsfw_1" => "This server is not marked as NSFW and you've specified a NSFW image.\nThis can be \
-                                 overriden by executing `nsfwfilter 1`"
+                    "nsfw_moderate" => "This channel is not marked as NSFW and you've specified a NSFW image.\nThis \
+                                        can be overriden by executing `nsfwfilter 1`"
                         .to_string(),
-                    "nsfw_2" => "This server is not marked as NSFW and you've specified a NSFW image.\nThis can be \
-                                 overriden by executing `nsfwfilter 2`"
+                    "nsfw_strict" => "This channel is not marked as NSFW and you've specified a NSFW image.\nThis can \
+                                      be overriden by executing `nsfwfilter 2`"
                         .to_string(),
                     _ => {
                         let content = format!("Undocumted error, please report this to L3af#0001\nError: `{:?}``", err);
-
                         println!("{}", content);
 
                         content
@@ -388,10 +377,8 @@ async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
 }
 
 #[hook]
-
 async fn dynamic_prefix(ctx: &Context, _msg: &Message) -> Option<String> {
     let data = ctx.data.read().await;
-
     let settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
 
     Some(settings.clone().command_prefix)
@@ -401,28 +388,21 @@ async fn spawn_pfp_change_thread(ctx: Arc<Mutex<Context>>) {
     task::spawn(async move {
         loop {
             let start_time = std::time::SystemTime::now();
-
             loop {
                 {
                     let ctx = ctx.lock().await;
-
                     let data = ctx.data.read().await;
-
-                    let settings: tokio::sync::MutexGuard<'_, Settings> =
-                        data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
+                    let settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
 
                     if settings.pfp_switcher.enabled
                         && start_time.elapsed().unwrap().as_secs() >= (settings.pfp_switcher.delay * 60) as u64
                     {
                         let path = Path::new("./pfps/");
-
                         let ops = path.read_dir().unwrap().collect::<Vec<Result<DirEntry, Error>>>();
-
                         let new_pfp = match settings.pfp_switcher.mode {
                             0 => ops[rand::thread_rng().gen_range(0..ops.len())].as_ref(),
                             1 => {
                                 // TODO: This shit
-
                                 ops[rand::thread_rng().gen_range(0..ops.len())].as_ref()
                             },
                             _ => ops[rand::thread_rng().gen_range(0..ops.len())].as_ref(),
@@ -430,14 +410,11 @@ async fn spawn_pfp_change_thread(ctx: Arc<Mutex<Context>>) {
                         .unwrap();
 
                         let mut user = ctx.cache.current_user().await;
-
                         let avatar =
                             read_image(format!("./pfps/{}", new_pfp.file_name().into_string().unwrap())).unwrap();
-
                         user.edit(&ctx.http, |p| p.avatar(Some(&avatar))).await.unwrap();
 
                         println!("[PfpSwitcher] Changing pfps");
-
                         break;
                     }
                 }
@@ -449,7 +426,6 @@ async fn spawn_pfp_change_thread(ctx: Arc<Mutex<Context>>) {
 }
 
 #[tokio::main]
-
 async fn main() {
     let settings = if Path::exists(Path::new(&"config.toml")) {
         match load_settings() {
@@ -497,17 +473,12 @@ async fn main() {
 
     {
         let mut data = client.data.write().await;
-
         data.insert::<CommandCounter>(HashMap::default());
-
         data.insert::<Settings>(Arc::new(Mutex::new(settings)));
-
         data.insert::<ShardManagerContainer>(Arc::clone(&client.shard_manager));
     }
 
-    println!("[Bot] Loaded client");
-
-    println!("[Bot] Starting client");
+    println!("[Bot] Loaded client\n[Bot] Starting client");
 
     if let Err(why) = client.start().await {
         println!("[Bot] Client error: {:?}", why);

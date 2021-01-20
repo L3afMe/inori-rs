@@ -21,5 +21,4 @@ use serenity::framework::standard::macros::group;
     urbandictionary
 )]
 #[description("**Fun**")]
-
 struct Fun;

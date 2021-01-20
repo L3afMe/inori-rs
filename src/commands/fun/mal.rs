@@ -20,7 +20,6 @@ use crate::models::{
 #[example("anime Kimi no na wa")]
 #[sub_commands(anime, manga, character, actor)]
 #[min_args(1)]
-
 async fn myanimelist(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     msg.channel_id
         .send_tmp(ctx, |m: &mut MessageCreator| {
@@ -37,7 +36,6 @@ static BASE_URL: &str = "https://api.jikan.moe/v3/";
 #[description("Search for anime and manga voice actors")]
 #[usage("<name>")]
 #[example("Yoshitsugu Matsuoka")]
-
 async fn actor(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let params = args.rest();
 
@@ -65,7 +63,7 @@ async fn actor(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
     let res: MALSearchResponse<MALPersonSearchResult> = serde_json::from_str(&res).unwrap();
 
-    if res.results.len() == 0 {
+    if res.results.is_empty() {
         new_msg.delete(&ctx.http).await?;
 
         return msg
@@ -86,12 +84,11 @@ async fn actor(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 .content(format!("[{}]({})", result.name, result.url))
                 .thumbnail(&result.image_url);
 
-            if result.alternate_names.len() > 0 {
+            if !result.alternate_names.is_empty() {
                 msg.field("Alternative Names", result.alternate_names.join("\n"), true);
             }
 
             msg.field("MAL ID", result.mal_id, true);
-
             msgs.push(msg);
         }
 
@@ -105,7 +102,6 @@ async fn actor(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[description("Search for character")]
 #[usage("<name>")]
 #[example("Zero Two")]
-
 async fn character(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let params = args.rest();
 
@@ -133,7 +129,7 @@ async fn character(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
     let res: MALSearchResponse<MALCharacterSearchResult> = serde_json::from_str(&res).unwrap();
 
-    if res.results.len() == 0 {
+    if res.results.is_empty() {
         new_msg.delete(&ctx.http).await?;
 
         return msg
@@ -154,11 +150,11 @@ async fn character(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 .thumbnail(&result.image_url)
                 .content(format!("[{}]({})", result.name, result.url));
 
-            if result.alternate_names.len() > 0 {
+            if !result.alternate_names.is_empty() {
                 msg.field("Alternative Names", result.alternate_names.join("\n"), true);
             }
 
-            if result.anime.len() > 0 {
+            if !result.anime.is_empty() {
                 let anime_list = result
                     .anime
                     .iter()
@@ -168,7 +164,7 @@ async fn character(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 msg.field("Anime", anime_list.join("\n"), true);
             }
 
-            if result.manga.len() > 0 {
+            if !result.manga.is_empty() {
                 let manga_list = result
                     .manga
                     .iter()
@@ -179,7 +175,6 @@ async fn character(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             }
 
             msg.field("MAL ID", result.mal_id, true);
-
             msgs.push(msg);
         }
 
@@ -193,7 +188,6 @@ async fn character(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[description("Search for manga")]
 #[usage("<name>")]
 #[example("One Piece")]
-
 async fn manga(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let params = args.rest();
 
@@ -221,7 +215,7 @@ async fn manga(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
     let res: MALSearchResponse<MALMangaSearchResult> = serde_json::from_str(&res).unwrap();
 
-    if res.results.len() == 0 {
+    if res.results.is_empty() {
         new_msg.delete(&ctx.http).await?;
 
         return msg
@@ -262,7 +256,6 @@ async fn manga(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[description("Search for anime")]
 #[usage("<name>")]
 #[example("Shingeki no Kyojin")]
-
 async fn anime(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let params = args.rest();
 
@@ -290,7 +283,7 @@ async fn anime(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
     let res: MALSearchResponse<MALAnimeSearchResult> = serde_json::from_str(&res).unwrap();
 
-    if res.results.len() == 0 {
+    if res.results.is_empty() {
         new_msg.delete(&ctx.http).await?;
 
         return msg

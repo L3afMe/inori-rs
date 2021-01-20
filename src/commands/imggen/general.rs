@@ -17,9 +17,7 @@ use crate::{
 
 async fn neko_bot(ctx: &Context, msg: &Message, url: &str, title: &str) -> CommandResult {
     let mut msg = msg.channel_id.send_loading(ctx, title, "Generating image").await.unwrap();
-
     let res = reqwest::get(url).await.unwrap().text().await.unwrap();
-
     let res = serde_json::from_str::<NekoBotResponse>(&res).expect("Couldn't parse response.");
 
     msg.update_noret(ctx, |m: &mut MessageCreator| m.title(title).image(res.message))
@@ -31,7 +29,6 @@ async fn neko_bot(ctx: &Context, msg: &Message, url: &str, title: &str) -> Comma
 #[usage("<message>")]
 #[example("Stop being such an idiot")]
 #[min_args(1)]
-
 async fn clyde(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     neko_bot(
         ctx,
@@ -48,7 +45,6 @@ async fn clyde(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[usage("<message>")]
 #[example("Thighs are life")]
 #[min_args(1)]
-
 async fn kannagen(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     neko_bot(
         ctx,
@@ -66,18 +62,15 @@ async fn kannagen(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[example("@L3af#0001 If only she was a cat girl")]
 #[example("What a beautiful body")]
 #[min_args(1)]
-
 async fn phcomment(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let mut user = &msg.author;
-
     let first_arg = args.single::<String>()?;
-
     let mut message = args.rest().to_string();
 
-    if is_mention(&first_arg) && msg.mentions.len() >= 1 {
+    if is_mention(&first_arg) && !msg.mentions.is_empty() {
         user = msg.mentions.get(0).unwrap();
 
-        if message.len() == 0 {
+        if message.is_empty() {
             return msg
                 .channel_id
                 .send_tmp(ctx, |m: &mut MessageCreator| {
@@ -109,7 +102,6 @@ async fn phcomment(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
 #[usage("<message>")]
 #[example("Catgirls are all that matter")]
 #[min_args(1)]
-
 async fn trumptweet(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     neko_bot(
         ctx,
@@ -126,7 +118,6 @@ async fn trumptweet(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[usage("<opinion>")]
 #[example("SelfBots shouldn't be against TOS")]
 #[min_args(1)]
-
 async fn changemymind(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     neko_bot(
         ctx,
@@ -144,7 +135,6 @@ async fn changemymind(ctx: &Context, msg: &Message, args: Args) -> CommandResult
 #[description("Lolice Chief'ify mentioned users profile picture")]
 #[usage("[@user]")]
 #[example("@L3af#0001")]
-
 async fn lolice(ctx: &Context, msg: &Message) -> CommandResult {
     if msg.mentions.is_empty() {
         let _ = neko_bot(
@@ -179,7 +169,6 @@ async fn lolice(ctx: &Context, msg: &Message) -> CommandResult {
 #[description("Generates a captcha with a users profile picture")]
 #[usage("<@user>")]
 #[example("@L3af#0001")]
-
 async fn cutie(ctx: &Context, msg: &Message) -> CommandResult {
     if msg.mentions.is_empty() {
         let _ = neko_bot(

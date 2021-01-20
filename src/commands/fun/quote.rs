@@ -11,7 +11,6 @@ use crate::{models::quotes::*, InoriChannelUtils, InoriMessageUtils, MessageCrea
 #[description("Get a random quote from several people like Chuck Norris, Donald Trump and Kanye")]
 #[sub_commands(kanyewest, donaldtrump, chucknorris)]
 #[min_args(1)]
-
 async fn quote(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     msg.channel_id
         .send_tmp(ctx, |m: &mut MessageCreator| {
@@ -27,7 +26,7 @@ where
     T: serde::de::DeserializeOwned, {
     let res = if let Ok(res) = reqwest::get(url).await {
         if let Ok(res) = res.text().await {
-            res.clone()
+            res
         } else {
             return Err("Unable to get string from response".to_string());
         }
@@ -45,10 +44,8 @@ where
 #[command]
 #[aliases("kanye")]
 #[description("Random Kanye West quotes")]
-
 async fn kanyewest(ctx: &Context, msg: &Message) -> CommandResult {
     let mut new_msg = msg.channel_id.send_loading(ctx, "Quote", "Loading quote").await.unwrap();
-
     let res = get_result::<KanyeRestResponse>("https://api.kanye.rest").await;
 
     return match res {
@@ -72,10 +69,8 @@ async fn kanyewest(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[aliases("trump")]
 #[description("Random stupid shit Donald Trump has said")]
-
 async fn donaldtrump(ctx: &Context, msg: &Message) -> CommandResult {
     let mut new_msg = msg.channel_id.send_loading(ctx, "Quote", "Loading quote").await.unwrap();
-
     let res = get_result::<TronaldDumpReponse>("https://api.tronalddump.io/random/quote").await;
 
     return match res {
@@ -125,11 +120,10 @@ static TAGS: Lazy<Vec<String>> = Lazy::new(|| {
 #[description("Random Chuck Norris quotes")]
 #[min_args(0)]
 #[max_args(1)]
-
 async fn chucknorris(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let mut new_msg = msg.channel_id.send_loading(ctx, "Quote", "Loading quote").await.unwrap();
 
-    let res = if args.len() == 0 {
+    let res = if args.is_empty() {
         get_result::<ChuckNorrisIoResponse>("https://api.chucknorris.io/jokes/random").await
     } else {
         let tag = args.current().unwrap().to_lowercase();

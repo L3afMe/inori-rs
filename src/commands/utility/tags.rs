@@ -12,21 +12,16 @@ use crate::{save_settings, InoriChannelUtils, MessageCreator, Settings};
 #[usage("<tag>")]
 #[example("TODO")]
 #[num_args(1)]
-
 async fn delete(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let data = ctx.data.write().await;
-
     let mut settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
-
     let name = args.single::<String>().unwrap();
 
     if settings.tags.contains_key(&name) {
         settings.tags.remove(&name);
-
         save_settings(&settings);
 
         drop(settings);
-
         drop(data);
 
         msg.channel_id
@@ -36,7 +31,6 @@ async fn delete(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
             .await
     } else {
         drop(settings);
-
         drop(data);
 
         msg.channel_id
@@ -52,19 +46,15 @@ async fn delete(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 #[usage("<tag> <message>")]
 #[example("TODO I'm at the start!")]
 #[min_args(2)]
-
 async fn preppend(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let data = ctx.data.write().await;
-
     let mut settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
 
     let name = args.single::<String>().unwrap();
-
     let message = args.rest().replace("\\n", "\n");
 
     if !settings.tags.contains_key(&name) {
         drop(settings);
-
         drop(data);
 
         msg.channel_id
@@ -76,17 +66,13 @@ async fn preppend(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
             .await
     } else {
         let old_msg = (&settings.tags.get(&name).unwrap()).to_string();
-
         settings.tags.remove(&name);
-
         let new_msg = format!("{} {}", message.to_string(), old_msg);
 
         settings.tags.insert(name.to_string(), new_msg);
-
         save_settings(&settings);
 
         drop(settings);
-
         drop(data);
 
         msg.channel_id
@@ -102,19 +88,15 @@ async fn preppend(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
 #[usage("<tag> <message>")]
 #[example("TODO I'm at the end!")]
 #[min_args(2)]
-
 async fn append(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let data = ctx.data.write().await;
-
     let mut settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
 
     let name = args.single::<String>().unwrap();
-
     let message = args.rest().replace("\\n", "\n");
 
     if !settings.tags.contains_key(&name) {
         drop(settings);
-
         drop(data);
 
         msg.channel_id
@@ -126,17 +108,13 @@ async fn append(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
             .await
     } else {
         let old_msg = (&settings.tags.get(&name).unwrap()).to_string();
-
         settings.tags.remove(&name);
-
         let new_msg = format!("{} {}", old_msg, message.to_string());
 
         settings.tags.insert(name.to_string(), new_msg);
-
         save_settings(&settings);
 
         drop(settings);
-
         drop(data);
 
         msg.channel_id
@@ -152,19 +130,15 @@ async fn append(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 #[usage("<tag> <search text> | <replacement text>")]
 #[example("Hello, World | Goodbye, World")]
 #[min_args(3)]
-
 async fn replace(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let data = ctx.data.write().await;
-
     let mut settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
 
     let name = args.single::<String>().unwrap();
-
     let message = args.rest();
 
     if !settings.tags.contains_key(&name) {
         drop(settings);
-
         drop(data);
 
         msg.channel_id
@@ -174,44 +148,35 @@ async fn replace(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
                     .content(format!("Tag with name '{}' doesn't exists", name))
             })
             .await
+    } else if message.contains('|') {
+        let split = message.split('|').collect::<Vec<&str>>();
+        let search_text = split.get(0).unwrap().trim();
+        let replacement_text = split.get(1).unwrap();
+        let old_msg = (&settings.tags.get(&name).unwrap()).to_string();
+
+        settings.tags.remove(&name);
+        let new_msg = old_msg.replace(search_text, replacement_text);
+
+        settings.tags.insert(name.to_string(), new_msg);
+        save_settings(&settings);
+
+        drop(settings);
+        drop(data);
+
+        msg.channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.title("Tags").content(format!("Updated tag with name '{}'", name))
+            })
+            .await
     } else {
-        if message.contains("|") {
-            let split = message.split("|").collect::<Vec<&str>>();
+        drop(settings);
+        drop(data);
 
-            let search_text = split.get(0).unwrap().trim();
-
-            let replacement_text = split.get(1).unwrap();
-
-            let old_msg = (&settings.tags.get(&name).unwrap()).to_string();
-
-            settings.tags.remove(&name);
-
-            let new_msg = old_msg.replace(search_text, replacement_text);
-
-            settings.tags.insert(name.to_string(), new_msg);
-
-            save_settings(&settings);
-
-            drop(settings);
-
-            drop(data);
-
-            msg.channel_id
-                .send_tmp(ctx, |m: &mut MessageCreator| {
-                    m.title("Tags").content(format!("Updated tag with name '{}'", name))
-                })
-                .await
-        } else {
-            drop(settings);
-
-            drop(data);
-
-            msg.channel_id
-                .send_tmp(ctx, |m: &mut MessageCreator| {
-                    m.error().title("Tags").content("No replacement text found")
-                })
-                .await
-        }
+        msg.channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error().title("Tags").content("No replacement text found")
+            })
+            .await
     }
 }
 
@@ -220,19 +185,15 @@ async fn replace(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
 #[usage("<tag> <message>")]
 #[example("TODO Something new I need to do")]
 #[min_args(2)]
-
 async fn edit(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let data = ctx.data.write().await;
-
     let mut settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
 
     let name = args.single::<String>().unwrap();
-
     let message = args.rest();
 
     if !settings.tags.contains_key(&name) {
         drop(settings);
-
         drop(data);
 
         msg.channel_id
@@ -244,13 +205,10 @@ async fn edit(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
             .await
     } else {
         settings.tags.remove(&name);
-
         settings.tags.insert(name.to_string(), message.to_string());
-
         save_settings(&settings);
 
         drop(settings);
-
         drop(data);
 
         msg.channel_id
@@ -267,19 +225,15 @@ async fn edit(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 #[usage("<tag> <message>")]
 #[example("TODO Something I need to do")]
 #[min_args(2)]
-
 async fn add(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let data = ctx.data.write().await;
-
     let mut settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
 
     let name = args.single::<String>().unwrap();
-
     let message = args.rest().replace("\\n", "\n");
 
     if settings.tags.contains_key(&name) {
         drop(settings);
-
         drop(data);
 
         msg.channel_id
@@ -291,11 +245,9 @@ async fn add(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
             .await
     } else {
         settings.tags.insert(name.to_string(), message.to_string());
-
         save_settings(&settings);
 
         drop(settings);
-
         drop(data);
 
         msg.channel_id
@@ -309,9 +261,7 @@ async fn add(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 async fn _list(ctx: &Context, msg: &Message) -> CommandResult {
     let content = {
         let data = ctx.data.read().await;
-
         let settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
-
         let mut content = "".to_string();
 
         if settings.tags.is_empty() {
@@ -333,7 +283,6 @@ async fn _list(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[aliases("list", "l")]
 #[description = "List all tags"]
-
 async fn list(ctx: &Context, msg: &Message) -> CommandResult {
     _list(ctx, msg).await
 }
@@ -346,22 +295,18 @@ async fn list(ctx: &Context, msg: &Message) -> CommandResult {
 #[example("TODO")]
 #[example("delete TODO")]
 #[sub_commands(add, delete, list, preppend, append, edit, replace)]
-
 async fn tags(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     if args.is_empty() {
         return _list(ctx, msg).await;
     } else {
         let data = ctx.data.write().await;
-
         let settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
-
         let name = args.rest();
 
         if settings.tags.contains_key(name) {
             let message = settings.tags.get(name).unwrap().to_string();
 
             drop(settings);
-
             drop(data);
 
             return msg
@@ -372,7 +317,6 @@ async fn tags(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 .await;
         } else {
             drop(settings);
-
             drop(data);
 
             return msg

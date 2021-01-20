@@ -1,6 +1,5 @@
 extern crate serde;
 extern crate serde_json;
-
 use serenity::{
     framework::standard::{macros::command, CommandResult},
     model::channel::Message,
@@ -28,14 +27,10 @@ async fn img_command(ctx: &Context, msg: &Message, command: &str, image: &str, d
 
     let mut new_msg = msg.channel_id.send_loading(ctx, command, "Loading image").await.unwrap();
 
-    let content = if msg.mentions.len() == 0 {
+    let content = if msg.mentions.is_empty() {
         let data = ctx.data.read().await;
-
         let settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
-
-        let pronoun = if settings.is_male { "himself" } else { "herself" };
-
-        pronoun
+        if settings.is_male { "himself" } else { "herself" }
     } else {
         &msg.mentions.get(0).unwrap().name
     };
@@ -65,7 +60,6 @@ async fn img_command(ctx: &Context, msg: &Message, command: &str, image: &str, d
 #[usage("[@user]")]
 #[example("@L3af#0001")]
 #[checks(NSFW_Strict)]
-
 async fn anal(ctx: &Context, msg: &Message) -> CommandResult {
     img_command(ctx, msg, "Anal", "anal", "{0} gave clapped {1}'s cheeks").await
 }
@@ -73,7 +67,6 @@ async fn anal(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[usage("[@user]")]
 #[example("@L3af#0001")]
-
 async fn cuddle(ctx: &Context, msg: &Message) -> CommandResult {
     img_command(ctx, msg, "Cuddle", "cuddle", "{0} snuggled up to {1}").await
 }
@@ -83,7 +76,6 @@ async fn cuddle(ctx: &Context, msg: &Message) -> CommandResult {
 #[usage("[@user]")]
 #[example("@L3af#0001")]
 #[checks(NSFW_Strict)]
-
 async fn blowjob(ctx: &Context, msg: &Message) -> CommandResult {
     img_command(ctx, msg, "Blowjob", "blowjob", "{0} gave {1} some sloppy top").await
 }
@@ -91,15 +83,13 @@ async fn blowjob(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[usage("[@user]")]
 #[example("@L3af#0001")]
-
 async fn pat(ctx: &Context, msg: &Message) -> CommandResult {
-    img_command(ctx, msg, "Pat", "pat", "{0} patted {1}").await
+    img_command(ctx, msg, "Pat", "pat", "{0} petted {1}").await
 }
 
 #[command]
 #[usage("[@user]")]
 #[example("@L3af#0001")]
-
 async fn poke(ctx: &Context, msg: &Message) -> CommandResult {
     img_command(ctx, msg, "Poke", "poke", "{0} poked {1}").await
 }
@@ -107,7 +97,6 @@ async fn poke(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[usage("[@user]")]
 #[example("@L3af#0001")]
-
 async fn slap(ctx: &Context, msg: &Message) -> CommandResult {
     img_command(ctx, msg, "Slap", "slap", "{0} slapped {1}").await
 }
@@ -116,7 +105,6 @@ async fn slap(ctx: &Context, msg: &Message) -> CommandResult {
 #[usage("[@user]")]
 #[example("@L3af#0001")]
 #[checks(NSFW_Moderate)]
-
 async fn spank(ctx: &Context, msg: &Message) -> CommandResult {
     img_command(ctx, msg, "Spank", "spank", "{0} gave a {1} a good spanking").await
 }
@@ -124,7 +112,6 @@ async fn spank(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[usage("[@user]")]
 #[example("@L3af#0001")]
-
 async fn tickle(ctx: &Context, msg: &Message) -> CommandResult {
     img_command(ctx, msg, "Tickle", "tickle", "{0} tickled {1}").await
 }
@@ -132,7 +119,6 @@ async fn tickle(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[usage("[@user]")]
 #[example("@L3af#0001")]
-
 async fn hug(ctx: &Context, msg: &Message) -> CommandResult {
     img_command(ctx, msg, "Hug", "hug", "{0} snuggled up to {1}").await
 }
@@ -140,7 +126,6 @@ async fn hug(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[usage("[@user]")]
 #[example("@L3af#0001")]
-
 async fn kiss(ctx: &Context, msg: &Message) -> CommandResult {
     img_command(ctx, msg, "Kiss", "kiss", "{0} kissed {1}").await
 }
@@ -148,7 +133,6 @@ async fn kiss(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[usage("[@user]")]
 #[example("@L3af#0001")]
-
 async fn feed(ctx: &Context, msg: &Message) -> CommandResult {
     img_command(ctx, msg, "Feed", "feed", "{0} fed {1}").await
 }

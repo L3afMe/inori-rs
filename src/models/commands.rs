@@ -5,13 +5,11 @@ use serenity::{client::bridge::gateway::ShardManager, prelude::TypeMapKey};
 use tokio::sync::Mutex;
 
 #[derive(Debug, Deserialize)]
-
 pub struct NekosLifeResponse {
     pub url: String,
 }
 
 #[derive(Debug, Deserialize)]
-
 pub struct NekoBotResponse {
     pub message: String,
 }
@@ -33,7 +31,6 @@ impl Img {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-
 pub struct Rule34Post {
     pub file_url: String,
     pub tags:     String,
@@ -41,7 +38,6 @@ pub struct Rule34Post {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-
 pub struct Rule34Posts {
     #[serde(rename = "post")]
     pub posts: Option<Vec<Rule34Post>>,
@@ -60,7 +56,6 @@ impl TypeMapKey for CommandCounter {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-
 pub struct FrankFurterResponse {
     pub amount: f64,
     pub base:   String,
@@ -69,7 +64,6 @@ pub struct FrankFurterResponse {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-
 pub struct MALMangaSearchResult {
     pub mal_id:     u64,
     pub url:        String,
@@ -88,7 +82,6 @@ pub struct MALMangaSearchResult {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-
 pub struct MALAnimeSearchResult {
     pub mal_id:     u64,
     pub url:        String,
@@ -126,7 +119,6 @@ where
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-
 pub struct MALPreview {
     pub mal_id: u64,
     pub name:   String,
@@ -134,7 +126,6 @@ pub struct MALPreview {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-
 pub struct MALCharacterSearchResult {
     pub mal_id:          u64,
     pub url:             String,
@@ -146,7 +137,6 @@ pub struct MALCharacterSearchResult {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-
 pub struct MALPersonSearchResult {
     pub mal_id:          u64,
     pub url:             String,
@@ -156,7 +146,6 @@ pub struct MALPersonSearchResult {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-
 pub struct MALSearchResponse<T> {
     pub last_page: u64,
     pub results:   Vec<T>,

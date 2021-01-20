@@ -25,15 +25,11 @@ where
     #[allow(while_true)]
     while true {
         println!("\nPlease input {}", msg.to_string());
-
         print!("> ");
-
         std::io::stdout().flush().unwrap();
 
         let mut buffer = String::new();
-
         reader.read_line(&mut buffer).await.unwrap();
-
         let input = &buffer[..buffer.len() - 1];
 
         if let Some(res) = f(input.to_string()).await {
@@ -72,7 +68,6 @@ pub async fn setup_settings() -> Settings {
                 },
                 200 => {
                     let user = serde_json::from_str::<BasicUser>(&res.text().await.unwrap()).unwrap();
-
                     println!("\nNice to meet you {}#{}!", user.username, user.discriminator);
 
                     Some(tkn)
@@ -91,11 +86,11 @@ pub async fn setup_settings() -> Settings {
         }
     })
     .await
-    .unwrap_or("<TOKEN HERE>".to_string());
+    .unwrap_or_else(|| "<TOKEN HERE>".to_string());
 
     let command_prefix = get_valid_input("preferred prefix (Default: ~)", async move |prefix: String| Some(prefix))
         .await
-        .unwrap_or("~".to_string());
+        .unwrap_or_else(|| "~".to_string());
 
     let global_nsfw_level: u8 = get_valid_input(
         "NSFW level for channels not marked as NSFW (Default: 1)\n0 - Strict filtering\n1 - Moderate filtering\n2 - \
@@ -141,7 +136,7 @@ pub async fn setup_settings() -> Settings {
         "if you would like to snipe nitro.\n1 - Enabled\n2 - Disabled",
         async move |input: String| match input.parse::<u8>() {
             Ok(op) => {
-                if op <= 2 && op >= 1 {
+                if (1..=2).contains(&op) {
                     Some(op == 1)
                 } else {
                     None
@@ -157,7 +152,7 @@ pub async fn setup_settings() -> Settings {
         "if you would like to use rich embeds.\n1 - Enabled\n2 - Disabled",
         async move |input: String| match input.parse::<u8>() {
             Ok(op) => {
-                if op <= 2 && op >= 1 {
+                if (1..=2).contains(&op) {
                     Some(op == 1)
                 } else {
                     None
@@ -173,7 +168,7 @@ pub async fn setup_settings() -> Settings {
         "if you would like to snipe SlotBot wallet drops.\n1 - Enabled\n2 - Disabled",
         async move |input: String| match input.parse::<u8>() {
             Ok(op) => {
-                if op <= 2 && op >= 1 {
+                if (1..=2).contains(&op) {
                     Some(op == 1)
                 } else {
                     None
@@ -191,7 +186,7 @@ pub async fn setup_settings() -> Settings {
              to be enabled if you're in a server which has changed the prefix.\n1 - Enabled\n2 - Disabled",
             async move |input: String| match input.parse::<u8>() {
                 Ok(op) => {
-                    if op <= 2 && op >= 1 {
+                    if (1..=2).contains(&op) {
                         Some(op == 1)
                     } else {
                         None
@@ -237,7 +232,7 @@ pub async fn setup_settings() -> Settings {
         ),
         async move |input: String| match input.parse::<u8>() {
             Ok(op) => {
-                if op <= 2 && op >= 1 {
+                if (1..=2).contains(&op) {
                     Some(op == 1)
                 } else {
                     None
@@ -293,7 +288,7 @@ pub async fn setup_settings() -> Settings {
         "if you would like to automatically join giveaways.\n1 - Enabled\n2 - Disabled",
         async move |input: String| match input.parse::<u8>() {
             Ok(op) => {
-                if op <= 2 && op >= 1 {
+                if (1..=2).contains(&op) {
                     Some(op == 1)
                 } else {
                     None
@@ -313,7 +308,7 @@ pub async fn setup_settings() -> Settings {
             }
         })
         .await
-        .unwrap_or(120)
+        .unwrap_or(20)
     } else {
         120
     };
@@ -322,7 +317,7 @@ pub async fn setup_settings() -> Settings {
         "if you would like messages to automatically delete.\n1 - Enabled\n2 - Disabled",
         async move |input: String| match input.parse::<u8>() {
             Ok(op) => {
-                if op <= 2 && op >= 1 {
+                if (1..=2).contains(&op) {
                     Some(op == 1)
                 } else {
                     None
@@ -365,7 +360,6 @@ pub async fn setup_settings() -> Settings {
         enabled: giveaway_enabled,
         delay:   giveaway_delay,
     };
-
     let slotbot: SlotBotConfig = SlotBotConfig {
         enabled: slotbot_enabled,
         dynamic_prefix: slotbot_dynamic_prefix,
@@ -394,29 +388,21 @@ pub async fn setup_settings() -> Settings {
         tags: HashMap::new(),
     };
 
-    match _save_settings(&settings) {
-        Ok(_) => {
-            println!("[Config] Config setup and ready to use");
+    if let Err(why) = _save_settings(&settings) {
+        panic!("[Config] Error while saving config: {}", why);
+    }
 
-            return settings;
-        },
-        Err(why) => {
-            panic!("[Config] Error while saving config: {}", why);
-        },
-    };
+    println!("[Config] Config setup and ready to use");
+    return settings;
 }
-
 pub fn load_settings() -> Result<Settings, String> {
     let mut contents = String::new();
 
     let mut f = match File::open("config.toml") {
         Ok(file) => file,
         Err(why) => {
-            match why.kind() {
-                std::io::ErrorKind::NotFound => {
-                    return Err("Unable to find 'config.toml', copy 'config.toml.bak' and setup config".to_string());
-                },
-                _ => {},
+            if let std::io::ErrorKind::NotFound = why.kind() {
+                return Err("Unable to find 'config.toml', copy 'config.toml.bak' and setup config".to_string());
             }
 
             return Err(format!("Unknown error occured while opening 'config.toml'\n[Config] {}", why));
@@ -424,11 +410,8 @@ pub fn load_settings() -> Result<Settings, String> {
     };
 
     if let Err(why) = f.read_to_string(&mut contents) {
-        match why.kind() {
-            std::io::ErrorKind::NotFound => {
-                return Err("Unable to find 'config.toml', copy 'config.toml.bak' and setup config".to_string());
-            },
-            _ => {},
+        if let std::io::ErrorKind::NotFound = why.kind() {
+            return Err("Unable to find 'config.toml', copy 'config.toml.bak' and setup config".to_string());
         }
 
         return Err(format!("Unknown error occured while opening 'config.toml'.\n[Config] {}", why));
@@ -436,7 +419,7 @@ pub fn load_settings() -> Result<Settings, String> {
 
     let res: Settings = match toml::from_str(&contents) {
         Ok(res) => res,
-        Err(why) => return Err(format!("Unable to deserialize settings.\nError {}", why)),
+        Err(why) => return Err(format!("Unable to deserialize settings.\n[Config] Error: {}", why)),
     };
 
     println!("[Config] Load successful");
@@ -465,8 +448,6 @@ pub fn _save_settings(settings: &Settings) -> Result<(), String> {
     );
 
     try_or_msg!(f.sync_data(), "Unable to write config to 'config.toml'".to_string());
-
     println!("[Config] Save successful");
-
     Ok(())
 }

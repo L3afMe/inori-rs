@@ -14,7 +14,6 @@ use tokio::time::{delay_for, Duration};
 use crate::{utils::general::get_perms, Settings};
 
 #[derive(Clone, Debug, Deserialize)]
-
 pub struct BasicUser {
     pub username:      String,
     pub discriminator: String,
@@ -37,15 +36,14 @@ impl Clone for Emote {
     fn clone(&self) -> Emote {
         Emote {
             name:     (&self.name).to_string(),
-            id:       self.id.clone(),
+            id:       self.id,
             url:      (&self.url).to_string(),
-            animated: self.animated.clone(),
+            animated: self.animated,
         }
     }
 }
 
 #[derive(Debug, Clone)]
-
 pub struct MessageField {
     title:   String,
     content: String,
@@ -63,7 +61,6 @@ impl MessageField {
 }
 
 #[derive(Debug, Clone)]
-
 pub struct MessageCreator<'a> {
     title:        Option<String>,
     success:      bool,
@@ -95,7 +92,6 @@ impl<'a> Default for MessageCreator<'a> {
 impl<'a> MessageCreator<'a> {
     pub fn to_message(&self) -> CreateMessage {
         let mut message = CreateMessage::default();
-
         let mut ctnt = String::new();
 
         if let Some(title) = &self.title {
@@ -184,12 +180,8 @@ impl<'a> MessageCreator<'a> {
 
     pub fn to_auto(&self, perms: Permissions) -> CreateMessage {
         if perms.embed_links() {
-            println!("Embed");
-
             self.to_embed()
         } else {
-            println!("Message");
-
             self.to_message()
         }
     }
@@ -252,7 +244,6 @@ impl<'a> MessageCreator<'a> {
 }
 
 #[async_trait]
-
 pub trait InoriChannelUtils {
     async fn send_tmp<'a, F: std::marker::Send>(&self, ctx: &Context, f: F) -> Result<(), CommandError>
     where
@@ -305,7 +296,6 @@ pub trait InoriChannelUtils {
 }
 
 #[async_trait]
-
 impl InoriChannelUtils for ChannelId {
     async fn send_tmp<'a, F: std::marker::Send>(&self, ctx: &Context, f: F) -> Result<(), CommandError>
     where
@@ -329,9 +319,7 @@ impl InoriChannelUtils for ChannelId {
     where
         for<'b> F: FnOnce(&'b mut MessageCreator<'a>) -> &'b mut MessageCreator<'a>, {
         let mut msg_creator = MessageCreator::default();
-
         let msg = f(&mut msg_creator);
-
         let perms = get_perms(ctx, self).await;
 
         let res = self
@@ -390,18 +378,14 @@ impl InoriChannelUtils for ChannelId {
         options: MenuOptions,
     ) -> Result<Option<Message>, CommandError> {
         let perms = get_perms(ctx, &msg.channel_id).await;
-
         let mut formatted_embeds = Vec::new();
 
         for (idx, embed) in embeds.iter().enumerate() {
             let mut msg = CreateMessage::default();
-
             let mut embed = embed.clone();
-
             embed.footer_text(format!("Page {} of {}", idx + 1, embeds.len()));
 
             msg.0 = embed.to_auto(perms).0;
-
             formatted_embeds.push(msg);
         }
 
@@ -428,7 +412,6 @@ impl InoriChannelUtils for ChannelId {
 }
 
 #[async_trait]
-
 pub trait InoriMessageUtils {
     async fn autodelete(&self, ctx: &Context) -> Result<(), CommandError>;
 
@@ -446,12 +429,10 @@ pub trait InoriMessageUtils {
 }
 
 #[async_trait]
-
 impl InoriMessageUtils for Message {
     async fn autodelete(&self, ctx: &Context) -> Result<(), CommandError> {
         let ad_delay = {
             let data = ctx.data.read().await;
-
             let settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
 
             if settings.autodelete.enabled {
@@ -463,7 +444,6 @@ impl InoriMessageUtils for Message {
 
         if let Some(delay) = ad_delay {
             let ctx = ctx.clone();
-
             let msg = self.clone();
 
             tokio::task::spawn(async move {
@@ -498,9 +478,7 @@ impl InoriMessageUtils for Message {
     where
         for<'b> F: FnOnce(&'b mut MessageCreator<'a>) -> &'b mut MessageCreator<'a>, {
         let mut msg_creator = MessageCreator::default();
-
         let msg = f(&mut msg_creator);
-
         let perms = get_perms(ctx, &self.channel_id).await;
 
         let res = self

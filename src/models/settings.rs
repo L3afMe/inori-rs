@@ -5,7 +5,6 @@ use serenity::prelude::TypeMapKey;
 use tokio::sync::Mutex;
 
 #[derive(Default, Serialize, Deserialize, Clone)]
-
 pub struct PfpSwitcher {
     pub delay:   u32,
     pub mode:    u8,
@@ -13,21 +12,18 @@ pub struct PfpSwitcher {
 }
 
 #[derive(Default, Serialize, Deserialize, Clone)]
-
 pub struct GiveawayConfig {
     pub enabled: bool,
     pub delay:   u64,
 }
 
 #[derive(Default, Serialize, Deserialize, Clone)]
-
 pub struct AutoDeleteConfig {
     pub enabled: bool,
     pub delay:   u64,
 }
 
 #[derive(Default, Serialize, Deserialize, Clone)]
-
 pub struct SlotBotConfig {
     pub enabled: bool,
     pub dynamic_prefix: bool,
@@ -37,7 +33,6 @@ pub struct SlotBotConfig {
 }
 
 #[derive(Default, Serialize, Deserialize, Clone)]
-
 pub struct Settings {
     pub user_token: String,
     pub command_prefix: String,

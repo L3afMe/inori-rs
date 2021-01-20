@@ -2,7 +2,6 @@ use serenity::{
     model::{id::ChannelId, Permissions},
     prelude::Context,
 };
-
 pub async fn get_perms(ctx: &Context, channel: &ChannelId) -> Permissions {
     if let Ok(channel) = ctx.http.get_channel(channel.0).await {
         if let Some(guild) = channel.guild() {
@@ -11,6 +10,8 @@ pub async fn get_perms(ctx: &Context, channel: &ChannelId) -> Permissions {
             if let Ok(perms) = guild.permissions_for_user(&ctx.cache, me.id.0).await {
                 return perms;
             }
+        } else {
+            return Permissions::from_bits(0b00000_1000110_1011100110001_000000).unwrap_or_else(Permissions::empty);
         }
     }
 
