@@ -11,7 +11,7 @@ env:
 name: Rust Checker
 
 jobs:
-  check:
+  build:
     name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -26,13 +26,6 @@ jobs:
       with:
           toolchain: nightly
           override: true
-          components: rustfmt, clippy
-
-    - name: Code format check
-      uses: actions-rs/cargo@v1
-      with:
-        command: fmt
-        args: -- --check
 
     - name: Run cargo check
       uses: actions-rs/cargo@v1
@@ -55,8 +48,31 @@ jobs:
           toolchain: nightly
           override: true
 
-    - name: Run tests
+    - name: Run test
       uses: actions-rs/cargo@v1
       with:
         command: test
         args: --verbose
+
+  format:
+    name: Checking format on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macOS-latest, windows-latest]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install latest nightly
+      uses: actions-rs/toolchain@v1
+      with:
+          toolchain: nightly
+          override: true
+          components: rustfmt
+
+    - name: Run tests
+      uses: actions-rs/cargo@v1
+      with:
+        command: check
+        args: -- --check
