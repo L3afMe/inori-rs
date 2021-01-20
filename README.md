@@ -33,6 +33,8 @@ How to build
 
 Pull requests for bug fixes and new features are more than welcomed but please ensure that you have the latest nightly RustFmt installed and have formatted your code before submitting.
 
+P.S. PRs for spelling and grammar mistakes are more than welcome!
+
 ## Commands
 
 #### This may be outdated, use `~help` for a list of all commands
