@@ -33,7 +33,7 @@ How to build
 
 ## Contributing
 
-Pull requests for bug fixes and new features are more than welcomed but please ensure that you have the latest nightly RustFmt installed and have formatted your code before submitting.
+Pull requests for bug fixes and new features are more than welcomed but please ensure that you have the latest RustFmt (built from source) installed and have formatted your code before submitting.
 
 P.S. PRs for spelling and grammar mistakes are more than welcome!
 
