@@ -7,8 +7,7 @@ use urlencoding::encode;
 
 use crate::models::{
     commands::{
-        MALAnimeSearchResult, MALCharacterSearchResult, MALMangaSearchResult,
-        MALPersonSearchResult, MALSearchResponse,
+        MALAnimeSearchResult, MALCharacterSearchResult, MALMangaSearchResult, MALPersonSearchResult, MALSearchResponse,
     },
     discord::{InoriChannelUtils, MessageCreator},
 };
@@ -21,6 +20,7 @@ use crate::models::{
 #[example("anime Kimi no na wa")]
 #[sub_commands(anime, manga, character, actor)]
 #[min_args(1)]
+
 async fn myanimelist(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     msg.channel_id
         .send_tmp(ctx, |m: &mut MessageCreator| {
@@ -37,8 +37,10 @@ static BASE_URL: &str = "https://api.jikan.moe/v3/";
 #[description("Search for anime and manga voice actors")]
 #[usage("<name>")]
 #[example("Yoshitsugu Matsuoka")]
+
 async fn actor(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let params = args.rest();
+
     if params.len() < 3 {
         return msg
             .channel_id
@@ -79,6 +81,7 @@ async fn actor(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
         for result in res.results {
             let mut msg = MessageCreator::default();
+
             msg.title("MyAnimeList")
                 .content(format!("[{}]({})", result.name, result.url))
                 .thumbnail(&result.image_url);
@@ -102,8 +105,10 @@ async fn actor(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[description("Search for character")]
 #[usage("<name>")]
 #[example("Zero Two")]
+
 async fn character(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let params = args.rest();
+
     if params.len() < 3 {
         return msg
             .channel_id
@@ -121,14 +126,10 @@ async fn character(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         .await
         .unwrap();
 
-    let res = reqwest::get(&format!(
-        "{}search/character?q={}",
-        BASE_URL,
-        encode(&params)
-    ))
-    .await?
-    .text()
-    .await?;
+    let res = reqwest::get(&format!("{}search/character?q={}", BASE_URL, encode(&params)))
+        .await?
+        .text()
+        .await?;
 
     let res: MALSearchResponse<MALCharacterSearchResult> = serde_json::from_str(&res).unwrap();
 
@@ -148,6 +149,7 @@ async fn character(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
         for result in res.results {
             let mut msg = MessageCreator::default();
+
             msg.title("MyAnimeList")
                 .thumbnail(&result.image_url)
                 .content(format!("[{}]({})", result.name, result.url));
@@ -172,8 +174,10 @@ async fn character(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                     .iter()
                     .map(|e| format!("[{}]({}) ({})", e.name, e.url, e.mal_id))
                     .collect::<Vec<String>>();
+
                 msg.field("Manga", manga_list.join("\n"), true);
             }
+
             msg.field("MAL ID", result.mal_id, true);
 
             msgs.push(msg);
@@ -189,8 +193,10 @@ async fn character(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[description("Search for manga")]
 #[usage("<name>")]
 #[example("One Piece")]
+
 async fn manga(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let params = args.rest();
+
     if params.len() < 3 {
         return msg
             .channel_id
@@ -231,12 +237,10 @@ async fn manga(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
         for result in res.results {
             let mut msg = MessageCreator::default();
+
             msg.title("MyAnimeList")
                 .thumbnail(&result.image_url)
-                .content(format!(
-                    "**[{}]({})**\n{}",
-                    result.title, result.url, result.synopsis
-                ))
+                .content(format!("**[{}]({})**\n{}", result.title, result.url, result.synopsis))
                 .field("Volumes", result.chapters, true)
                 .field("Chapters", result.chapters, true)
                 .field("Score", result.score, true)
@@ -258,8 +262,10 @@ async fn manga(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[description("Search for anime")]
 #[usage("<name>")]
 #[example("Shingeki no Kyojin")]
+
 async fn anime(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let params = args.rest();
+
     if params.len() < 3 {
         return msg
             .channel_id
@@ -300,12 +306,10 @@ async fn anime(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
         for result in res.results {
             let mut msg = MessageCreator::default();
+
             msg.title("MyAnimeList")
                 .thumbnail(&result.image_url)
-                .content(format!(
-                    "**[{}]({})**\n{}",
-                    result.title, result.url, result.synopsis
-                ))
+                .content(format!("**[{}]({})**\n{}", result.title, result.url, result.synopsis))
                 .field("Episodes", result.episodes, true)
                 .field("Score", result.score, true)
                 .field("Members", result.members, true)

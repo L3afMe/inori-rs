@@ -24,6 +24,7 @@ fn split_version(version: &str) -> Vec<&str> {
 
 fn compare_versions(curr_ver: &str, git_ver: &str) -> bool {
     let curr_split = split_version(curr_ver);
+
     let git_split = split_version(git_ver);
 
     for idx in 0..max(curr_split.len(), git_split.len()) {
@@ -31,6 +32,7 @@ fn compare_versions(curr_ver: &str, git_ver: &str) -> bool {
             Some(curr_part) => curr_part,
             None => return true,
         };
+
         let git_part = match git_split.get(idx) {
             Some(git_part) => git_part,
             None => return false,

@@ -14,15 +14,16 @@ use tokio::time::{delay_for, Duration};
 use crate::{utils::general::get_perms, Settings};
 
 #[derive(Clone, Debug, Deserialize)]
+
 pub struct BasicUser {
-    pub username: String,
+    pub username:      String,
     pub discriminator: String,
 }
 
 pub struct Emote {
-    pub name: String,
-    pub id: u64,
-    pub url: String,
+    pub name:     String,
+    pub id:       u64,
+    pub url:      String,
     pub animated: bool,
 }
 
@@ -35,19 +36,20 @@ impl PartialEq for Emote {
 impl Clone for Emote {
     fn clone(&self) -> Emote {
         Emote {
-            name: (&self.name).to_string(),
-            id: self.id.clone(),
-            url: (&self.url).to_string(),
+            name:     (&self.name).to_string(),
+            id:       self.id.clone(),
+            url:      (&self.url).to_string(),
             animated: self.animated.clone(),
         }
     }
 }
 
 #[derive(Debug, Clone)]
+
 pub struct MessageField {
-    title: String,
+    title:   String,
     content: String,
-    inline: bool,
+    inline:  bool,
 }
 
 impl MessageField {
@@ -61,29 +63,30 @@ impl MessageField {
 }
 
 #[derive(Debug, Clone)]
+
 pub struct MessageCreator<'a> {
-    title: Option<String>,
-    success: bool,
-    content: Option<String>,
-    image: Option<String>,
-    attachment: Option<AttachmentType<'a>>,
-    thumbnail: Option<String>,
-    fields: Vec<MessageField>,
-    footer_text: Option<String>,
+    title:        Option<String>,
+    success:      bool,
+    content:      Option<String>,
+    image:        Option<String>,
+    attachment:   Option<AttachmentType<'a>>,
+    thumbnail:    Option<String>,
+    fields:       Vec<MessageField>,
+    footer_text:  Option<String>,
     footer_image: Option<String>,
 }
 
 impl<'a> Default for MessageCreator<'a> {
     fn default() -> MessageCreator<'a> {
         MessageCreator {
-            title: None,
-            success: true,
-            content: None,
-            image: None,
-            attachment: None,
-            thumbnail: None,
-            fields: Vec::new(),
-            footer_text: None,
+            title:        None,
+            success:      true,
+            content:      None,
+            image:        None,
+            attachment:   None,
+            thumbnail:    None,
+            fields:       Vec::new(),
+            footer_text:  None,
             footer_image: None,
         }
     }
@@ -92,6 +95,7 @@ impl<'a> Default for MessageCreator<'a> {
 impl<'a> MessageCreator<'a> {
     pub fn to_message(&self) -> CreateMessage {
         let mut message = CreateMessage::default();
+
         let mut ctnt = String::new();
 
         if let Some(title) = &self.title {
@@ -126,6 +130,7 @@ impl<'a> MessageCreator<'a> {
 
     pub fn to_embed(&self) -> CreateMessage {
         let mut message = CreateMessage::default();
+
         message.embed(|e: &mut CreateEmbed| {
             e.colour(if self.success {
                 Colour::BLURPLE
@@ -180,9 +185,11 @@ impl<'a> MessageCreator<'a> {
     pub fn to_auto(&self, perms: Permissions) -> CreateMessage {
         if perms.embed_links() {
             println!("Embed");
+
             self.to_embed()
         } else {
             println!("Message");
+
             self.to_message()
         }
     }
@@ -223,13 +230,9 @@ impl<'a> MessageCreator<'a> {
         self
     }
 
-    pub fn field<D: ToString, T: ToString>(
-        &mut self,
-        title: D,
-        content: T,
-        inline: bool,
-    ) -> &mut Self {
+    pub fn field<D: ToString, T: ToString>(&mut self, title: D, content: T, inline: bool) -> &mut Self {
         let field = MessageField::new(&title.to_string(), &content.to_string(), inline);
+
         self.fields.push(field);
 
         self
@@ -249,28 +252,17 @@ impl<'a> MessageCreator<'a> {
 }
 
 #[async_trait]
+
 pub trait InoriChannelUtils {
-    async fn send_tmp<'a, F: std::marker::Send>(
-        &self,
-        ctx: &Context,
-        f: F,
-    ) -> Result<(), CommandError>
+    async fn send_tmp<'a, F: std::marker::Send>(&self, ctx: &Context, f: F) -> Result<(), CommandError>
     where
         for<'b> F: FnOnce(&'b mut MessageCreator<'a>) -> &'b mut MessageCreator<'a>;
 
-    async fn send_noret<'a, F: std::marker::Send>(
-        &self,
-        ctx: &Context,
-        f: F,
-    ) -> Result<(), CommandError>
+    async fn send_noret<'a, F: std::marker::Send>(&self, ctx: &Context, f: F) -> Result<(), CommandError>
     where
         for<'b> F: FnOnce(&'b mut MessageCreator<'a>) -> &'b mut MessageCreator<'a>;
 
-    async fn send<'a, F: std::marker::Send>(
-        &self,
-        ctx: &Context,
-        f: F,
-    ) -> Result<Message, CommandError>
+    async fn send<'a, F: std::marker::Send>(&self, ctx: &Context, f: F) -> Result<Message, CommandError>
     where
         for<'b> F: FnOnce(&'b mut MessageCreator<'a>) -> &'b mut MessageCreator<'a>;
 
@@ -313,47 +305,35 @@ pub trait InoriChannelUtils {
 }
 
 #[async_trait]
+
 impl InoriChannelUtils for ChannelId {
-    async fn send_tmp<'a, F: std::marker::Send>(
-        &self,
-        ctx: &Context,
-        f: F,
-    ) -> Result<(), CommandError>
+    async fn send_tmp<'a, F: std::marker::Send>(&self, ctx: &Context, f: F) -> Result<(), CommandError>
     where
-        for<'b> F: FnOnce(&'b mut MessageCreator<'a>) -> &'b mut MessageCreator<'a>,
-    {
+        for<'b> F: FnOnce(&'b mut MessageCreator<'a>) -> &'b mut MessageCreator<'a>, {
         match self.send(ctx, f).await {
             Ok(msg) => msg.autodelete(ctx).await,
             Err(err) => return Err(err),
         }
     }
 
-    async fn send_noret<'a, F: std::marker::Send>(
-        &self,
-        ctx: &Context,
-        f: F,
-    ) -> Result<(), CommandError>
+    async fn send_noret<'a, F: std::marker::Send>(&self, ctx: &Context, f: F) -> Result<(), CommandError>
     where
-        for<'b> F: FnOnce(&'b mut MessageCreator<'a>) -> &'b mut MessageCreator<'a>,
-    {
+        for<'b> F: FnOnce(&'b mut MessageCreator<'a>) -> &'b mut MessageCreator<'a>, {
         match self.send(ctx, f).await {
             Ok(_) => Ok(()),
             Err(err) => return Err(err),
         }
     }
 
-    async fn send<'a, F: std::marker::Send>(
-        &self,
-        ctx: &Context,
-        f: F,
-    ) -> Result<Message, CommandError>
+    async fn send<'a, F: std::marker::Send>(&self, ctx: &Context, f: F) -> Result<Message, CommandError>
     where
-        for<'b> F: FnOnce(&'b mut MessageCreator<'a>) -> &'b mut MessageCreator<'a>,
-    {
+        for<'b> F: FnOnce(&'b mut MessageCreator<'a>) -> &'b mut MessageCreator<'a>, {
         let mut msg_creator = MessageCreator::default();
+
         let msg = f(&mut msg_creator);
 
         let perms = get_perms(ctx, self).await;
+
         let res = self
             .send_message(&ctx, |m| {
                 m.0 = msg.to_auto(perms).0;
@@ -375,10 +355,8 @@ impl InoriChannelUtils for ChannelId {
         loading_msg: &str,
     ) -> Result<Message, CommandError> {
         self.send(ctx, |f: &mut MessageCreator| {
-            f.title(title).content(&format!(
-                "<a:discordloading:395769211517009930> {}...",
-                loading_msg
-            ))
+            f.title(title)
+                .content(&format!("<a:discordloading:395769211517009930> {}...", loading_msg))
         })
         .await
     }
@@ -389,8 +367,7 @@ impl InoriChannelUtils for ChannelId {
         msg: &Message,
         embeds: Vec<MessageCreator<'a>>,
     ) -> Result<Option<Message>, CommandError> {
-        self.send_paginatorwo(ctx, msg, embeds, MenuOptions::default())
-            .await
+        self.send_paginatorwo(ctx, msg, embeds, MenuOptions::default()).await
     }
 
     async fn send_paginator_noret<'a>(
@@ -413,21 +390,22 @@ impl InoriChannelUtils for ChannelId {
         options: MenuOptions,
     ) -> Result<Option<Message>, CommandError> {
         let perms = get_perms(ctx, &msg.channel_id).await;
+
         let mut formatted_embeds = Vec::new();
 
         for (idx, embed) in embeds.iter().enumerate() {
             let mut msg = CreateMessage::default();
+
             let mut embed = embed.clone();
 
             embed.footer_text(format!("Page {} of {}", idx + 1, embeds.len()));
 
             msg.0 = embed.to_auto(perms).0;
+
             formatted_embeds.push(msg);
         }
 
-        let res = Menu::new(ctx, msg, &formatted_embeds[..], options)
-            .run()
-            .await;
+        let res = Menu::new(ctx, msg, &formatted_embeds[..], options).run().await;
 
         match res {
             Ok(msg) => Ok(msg),
@@ -450,44 +428,31 @@ impl InoriChannelUtils for ChannelId {
 }
 
 #[async_trait]
+
 pub trait InoriMessageUtils {
     async fn autodelete(&self, ctx: &Context) -> Result<(), CommandError>;
 
-    async fn update_tmp<'a, F: std::marker::Send>(
-        &'a mut self,
-        ctx: &Context,
-        f: F,
-    ) -> Result<(), CommandError>
+    async fn update_tmp<'a, F: std::marker::Send>(&'a mut self, ctx: &Context, f: F) -> Result<(), CommandError>
     where
         for<'b> F: FnOnce(&'b mut MessageCreator<'a>) -> &'b mut MessageCreator<'a>;
 
-    async fn update_noret<'a, F: std::marker::Send>(
-        &'a mut self,
-        ctx: &Context,
-        f: F,
-    ) -> Result<(), CommandError>
+    async fn update_noret<'a, F: std::marker::Send>(&'a mut self, ctx: &Context, f: F) -> Result<(), CommandError>
     where
         for<'b> F: FnOnce(&'b mut MessageCreator<'a>) -> &'b mut MessageCreator<'a>;
 
-    async fn update<'a, F: std::marker::Send>(
-        &'a mut self,
-        ctx: &Context,
-        f: F,
-    ) -> Result<&'a Message, CommandError>
+    async fn update<'a, F: std::marker::Send>(&'a mut self, ctx: &Context, f: F) -> Result<&'a Message, CommandError>
     where
         for<'b> F: FnOnce(&'b mut MessageCreator<'a>) -> &'b mut MessageCreator<'a>;
 }
 
 #[async_trait]
+
 impl InoriMessageUtils for Message {
     async fn autodelete(&self, ctx: &Context) -> Result<(), CommandError> {
         let ad_delay = {
             let data = ctx.data.read().await;
-            let settings = data
-                .get::<Settings>()
-                .expect("Expected Setting in TypeMap.")
-                .lock()
-                .await;
+
+            let settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
 
             if settings.autodelete.enabled {
                 Some(settings.autodelete.delay)
@@ -498,10 +463,12 @@ impl InoriMessageUtils for Message {
 
         if let Some(delay) = ad_delay {
             let ctx = ctx.clone();
+
             let msg = self.clone();
 
             tokio::task::spawn(async move {
                 delay_for(Duration::from_secs(delay)).await;
+
                 let _ = ctx.http.delete_message(msg.channel_id.0, msg.id.0).await;
             });
         }
@@ -509,43 +476,29 @@ impl InoriMessageUtils for Message {
         Ok(())
     }
 
-    async fn update_tmp<'a, F: std::marker::Send>(
-        &'a mut self,
-        ctx: &Context,
-        f: F,
-    ) -> Result<(), CommandError>
+    async fn update_tmp<'a, F: std::marker::Send>(&'a mut self, ctx: &Context, f: F) -> Result<(), CommandError>
     where
-        for<'b> F: FnOnce(&'b mut MessageCreator<'a>) -> &'b mut MessageCreator<'a>,
-    {
+        for<'b> F: FnOnce(&'b mut MessageCreator<'a>) -> &'b mut MessageCreator<'a>, {
         match self.update(ctx, f).await {
             Ok(msg) => msg.autodelete(ctx).await,
             Err(err) => return Err(err),
         }
     }
 
-    async fn update_noret<'a, F: std::marker::Send>(
-        &'a mut self,
-        ctx: &Context,
-        f: F,
-    ) -> Result<(), CommandError>
+    async fn update_noret<'a, F: std::marker::Send>(&'a mut self, ctx: &Context, f: F) -> Result<(), CommandError>
     where
-        for<'b> F: FnOnce(&'b mut MessageCreator<'a>) -> &'b mut MessageCreator<'a>,
-    {
+        for<'b> F: FnOnce(&'b mut MessageCreator<'a>) -> &'b mut MessageCreator<'a>, {
         match self.update(ctx, f).await {
             Ok(_) => Ok(()),
             Err(err) => return Err(err),
         }
     }
 
-    async fn update<'a, F: std::marker::Send>(
-        &'a mut self,
-        ctx: &Context,
-        f: F,
-    ) -> Result<&'a Message, CommandError>
+    async fn update<'a, F: std::marker::Send>(&'a mut self, ctx: &Context, f: F) -> Result<&'a Message, CommandError>
     where
-        for<'b> F: FnOnce(&'b mut MessageCreator<'a>) -> &'b mut MessageCreator<'a>,
-    {
+        for<'b> F: FnOnce(&'b mut MessageCreator<'a>) -> &'b mut MessageCreator<'a>, {
         let mut msg_creator = MessageCreator::default();
+
         let msg = f(&mut msg_creator);
 
         let perms = get_perms(ctx, &self.channel_id).await;

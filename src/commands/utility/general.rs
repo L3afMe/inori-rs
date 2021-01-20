@@ -1,10 +1,9 @@
 extern crate meval;
 extern crate urlencoding;
 
-use urlencoding::encode;
+use std::{cmp::min, time::Instant};
 
 use rand::Rng;
-
 use serenity::{
     client::bridge::gateway::ShardId,
     constants::GATEWAY_VERSION,
@@ -17,10 +16,8 @@ use serenity::{
     },
     prelude::Context,
 };
-
-use std::{cmp::min, time::Instant};
-
 use tokio::runtime::Builder;
+use urlencoding::encode;
 
 use crate::{
     models::commands::{CommandCounter, FrankFurterResponse, ShardManagerContainer},
@@ -31,6 +28,7 @@ use crate::{
 
 #[command]
 #[description("Display information about Inori-rs")]
+
 async fn about(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id
         .send_noret(ctx, |m: &mut MessageCreator| {
@@ -64,9 +62,8 @@ async fn about(ctx: &Context, msg: &Message) -> CommandResult {
 }
 
 #[command]
-#[description(
-    "This will create a new server and add emotes to it which are used throughout the selfbot"
-)]
+#[description("This will create a new server and add emotes to it which are used throughout the selfbot")]
+
 async fn setup(ctx: &Context, msg: &Message) -> CommandResult {
     let res = ctx
         .http
@@ -75,34 +72,29 @@ async fn setup(ctx: &Context, msg: &Message) -> CommandResult {
             "region": "us-west"
         }))
         .await;
+
     let guild = match res {
         Ok(guild) => guild,
         Err(why) => {
             return msg
                 .channel_id
                 .send_tmp(ctx, |m: &mut MessageCreator| {
-                    m.error()
-                        .title("Setup")
-                        .content(format!("Couldn't create server\n{:?}", why))
+                    m.error().title("Setup").content(format!("Couldn't create server\n{:?}", why))
                 })
-                .await
-        }
+                .await;
+        },
     };
 
     for key in EMOTES.keys() {
-        guild
-            .create_emoji(&ctx.http, key, EMOTES.get(key).unwrap())
-            .await?;
+        guild.create_emoji(&ctx.http, key, EMOTES.get(key).unwrap()).await?;
     }
 
     let data = ctx.data.write().await;
-    let mut settings = data
-        .get::<Settings>()
-        .expect("Expected Setting in TypeMap.")
-        .lock()
-        .await;
+
+    let mut settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
 
     settings.emoteserver = guild.id.0;
+
     save_settings(&settings);
 
     Ok(())
@@ -119,8 +111,8 @@ async fn print_av(ctx: &Context, msg: &Message, user: &User) -> CommandResult {
                         .title("Avatar")
                         .content(format!("Unable to get {}'s avatar URL", user.name))
                 })
-                .await
-        }
+                .await;
+        },
     };
 
     return msg
@@ -143,6 +135,7 @@ async fn print_av(ctx: &Context, msg: &Message, user: &User) -> CommandResult {
 #[description("Gets the pfp(s) of the mentioned user(s), if no one mentioned then gets self")]
 #[usage("[@users]")]
 #[example("@L3af#0001")]
+
 async fn avatar(ctx: &Context, msg: &Message) -> CommandResult {
     if msg.mentions.len() > 0 {
         for mention in &msg.mentions {
@@ -158,6 +151,7 @@ async fn avatar(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[aliases("ratelimit", "rl")]
 #[description("List Discords ratelimits")]
+
 async fn ratelimits(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id
         .send_noret(ctx, |m: &mut MessageCreator| {
@@ -182,6 +176,7 @@ async fn ratelimits(ctx: &Context, msg: &Message) -> CommandResult {
 #[description("Gives information about a guild")]
 #[only_in("guilds")]
 #[aliases("server", "guild", "guildinfo")]
+
 async fn serverinfo(ctx: &Context, msg: &Message) -> CommandResult {
     let mut new_msg = msg
         .channel_id
@@ -189,17 +184,14 @@ async fn serverinfo(ctx: &Context, msg: &Message) -> CommandResult {
         .await
         .unwrap();
 
-    let cached_guild = msg
-        .guild_id
-        .unwrap()
-        .to_guild_cached(&ctx.cache)
-        .await
-        .unwrap();
+    let cached_guild = msg.guild_id.unwrap().to_guild_cached(&ctx.cache).await.unwrap();
 
     // let owner: User = cached_guild.owner_id.to_user(&ctx).await?;
 
     let mut animated_emotes = 0;
+
     let mut regular_emotes = 0;
+
     for emoji in &cached_guild.emojis {
         if emoji.1.animated {
             animated_emotes += 1;
@@ -207,35 +199,43 @@ async fn serverinfo(ctx: &Context, msg: &Message) -> CommandResult {
             regular_emotes += 1;
         };
     }
+
     let emoji_limit = cached_guild.premium_tier.num() * 50 + 50;
+
     let emote_string = format!(
         "Regular: {}/{}\nAnimated: {}/{}",
         regular_emotes, emoji_limit, animated_emotes, emoji_limit
     );
 
     let mut text_channels = 0;
+
     let mut voice_channels = 0;
 
     for channel in &cached_guild.channels {
         let channel = channel.1;
+
         if channel.kind == ChannelType::Text {
             text_channels += 1;
         } else if channel.kind == ChannelType::Voice {
             voice_channels += 1;
         }
     }
+
     let channels_text = format!(
-        "<:text_channel:797147634284101693> {}\n\
-                <:voice_channel:797147798209429535> {}",
+        "<:text_channel:797147634284101693> {}\n<:voice_channel:797147798209429535> {}",
         text_channels, voice_channels
     );
 
     let mut bot_count = 0;
+
     let mut human_count = 0;
 
     let mut online_count = 0;
+
     let mut idle_count = 0;
+
     let mut dnd_count = 0;
+
     let mut offline_count = 0;
 
     for member_result in &cached_guild.members {
@@ -252,22 +252,19 @@ async fn serverinfo(ctx: &Context, msg: &Message) -> CommandResult {
                 OnlineStatus::Idle => idle_count += 1,
                 OnlineStatus::Offline => offline_count += 1,
                 OnlineStatus::Invisible => offline_count += 1,
-                _ => {}
+                _ => {},
             },
             None => {
                 offline_count += 1;
-            }
+            },
         }
     }
+
     let member_count = bot_count + human_count;
+
     let member_string = format!(
-        "<:status_online:797127703752081408> {} • \
-                <:status_idle:797127751764410408> {} • \
-                <:status_dnd:797127797415084063> {} • \
-                <:status_offline:797127842235678731> {}\n\
-                {} humans \n\
-                {} bots\n\
-                {} total",
+        "<:status_online:797127703752081408> {} • <:status_idle:797127751764410408> {} • \
+         <:status_dnd:797127797415084063> {} • <:status_offline:797127842235678731> {}\n{} humans \n{} bots\n{} total",
         online_count, idle_count, dnd_count, offline_count, human_count, bot_count, member_count
     );
 
@@ -282,18 +279,17 @@ async fn serverinfo(ctx: &Context, msg: &Message) -> CommandResult {
             m.title(&cached_guild.name)
                 .thumbnail(&cached_guild.icon_url().unwrap_or(String::new()))
                 .footer_text(format!("ID: {} • Created", cached_guild.id.0));
+
             //.timestamp(&msg.guild_id.unwrap().created_at());
 
-            /*
-            msg.author(|f| {
-                f.name(format!(
-                    "{}#{} 👑",
-                    owner.name,
-                    format!("{:0>4}", owner.discriminator)
-                ))
-                .icon_url(owner.avatar_url().unwrap_or(String::new()))
-            });
-            */
+            // msg.author(|f| {
+            // f.name(format!(
+            // "{}#{} 👑",
+            // owner.name,
+            // format!("{:0>4}", owner.discriminator)
+            // ))
+            // .icon_url(owner.avatar_url().unwrap_or(String::new()))
+            // });
 
             m.field("Emotes", emote_string, true)
                 .field("Channels", channels_text, true)
@@ -307,6 +303,7 @@ async fn serverinfo(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[aliases("latency")]
 #[description("Gets the current GET, POST and Shard latencies")]
+
 async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
     let data = ctx.data.read().await;
 
@@ -316,15 +313,14 @@ async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
             return msg
                 .channel_id
                 .send_tmp(ctx, |m: &mut MessageCreator| {
-                    m.error()
-                        .title("Ping")
-                        .content("ERROR: Couldn't get Shard Manager")
+                    m.error().title("Ping").content("ERROR: Couldn't get Shard Manager")
                 })
                 .await;
-        }
+        },
     };
 
     let manager = shard_manager.lock().await;
+
     let runners = manager.runners.lock().await;
 
     let runner = match runners.get(&ShardId(ctx.shard_id)) {
@@ -336,26 +332,28 @@ async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
                     m.error().title("Ping").content("ERROR: No shard found")
                 })
                 .await;
-        }
+        },
     };
 
     let mut shard_latency = match runner.latency {
         Some(latency) => format!("\nShard latency: {}ms", latency.as_millis()).to_string(),
         None => "".to_string(),
     };
+
     shard_latency = format!("{}ms", shard_latency);
 
     let gateway_url = format!("https://discord.com/api/v{}/gateway", GATEWAY_VERSION);
 
     let now = Instant::now();
+
     reqwest::get(&gateway_url).await?;
+
     let get_latency = now.elapsed().as_millis();
 
     let now = Instant::now();
-    let sent_message = msg
-        .channel_id
-        .send_loading(ctx, "Ping", "Calculating latency")
-        .await;
+
+    let sent_message = msg.channel_id.send_loading(ctx, "Ping", "Calculating latency").await;
+
     let post_latency = now.elapsed().as_millis();
 
     sent_message
@@ -372,11 +370,11 @@ async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[aliases("count")]
 #[description("Lists how many times commands have been used since the bot last restarted")]
+
 async fn usages(ctx: &Context, msg: &Message) -> CommandResult {
     let data = ctx.data.read().await;
-    let counter = data
-        .get::<CommandCounter>()
-        .expect("Expected CommandCounter in TypeMap.");
+
+    let counter = data.get::<CommandCounter>().expect("Expected CommandCounter in TypeMap.");
 
     msg.channel_id
         .send_tmp(ctx, |m: &mut MessageCreator| {
@@ -398,8 +396,10 @@ async fn usages(ctx: &Context, msg: &Message) -> CommandResult {
 #[example("20")]
 #[required_permissions("MANAGE_MESSAGES")]
 #[num_args(1)]
+
 async fn purgechat(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let delete_num = args.single::<u64>();
+
     match delete_num {
         Err(_) => {
             return msg
@@ -410,36 +410,23 @@ async fn purgechat(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
                         .content(":no_entry_sign: The value provided was not a valid number")
                 })
                 .await;
-        }
+        },
 
         Ok(delete_n) => {
             let mut find_msg = msg
                 .channel_id
-                .send_loading(
-                    ctx,
-                    "Purge Chat",
-                    &format!("Finding and deleting {} messages", delete_n),
-                )
+                .send_loading(ctx, "Purge Chat", &format!("Finding and deleting {} messages", delete_n))
                 .await
                 .unwrap();
 
-            let channel = &ctx
-                .http
-                .get_channel(msg.channel_id.0)
-                .await
-                .unwrap()
-                .guild()
-                .unwrap();
+            let channel = &ctx.http.get_channel(msg.channel_id.0).await.unwrap().guild().unwrap();
 
-            let messages = &channel
-                .messages(ctx, |r| r.before(&msg.id).limit(delete_n))
-                .await?;
+            let messages = &channel.messages(ctx, |r| r.before(&msg.id).limit(delete_n)).await?;
+
             let message_ids = messages.iter().map(|m| m.id).collect::<Vec<MessageId>>();
 
             for message_id in message_ids {
-                ctx.http
-                    .delete_message(msg.channel_id.0, message_id.0)
-                    .await?;
+                ctx.http.delete_message(msg.channel_id.0, message_id.0).await?;
             }
 
             return find_msg
@@ -448,7 +435,7 @@ async fn purgechat(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
                         .content(format!(":white_check_mark: Deleted {} messages", delete_n))
                 })
                 .await;
-        }
+        },
     }
 }
 
@@ -458,8 +445,10 @@ async fn purgechat(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
 #[usage("<amount>")]
 #[example("20")]
 #[num_args(1)]
+
 async fn purge(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let delete_num = args.single::<u64>();
+
     match delete_num {
         Err(_) => {
             return msg
@@ -469,30 +458,18 @@ async fn purge(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                         .title("Purge")
                         .content(":no_entry_sign: The value provided is not a valid number")
                 })
-                .await
-        }
+                .await;
+        },
         Ok(delete_n) => {
             let mut find_msg = msg
                 .channel_id
-                .send_loading(
-                    ctx,
-                    "Purge",
-                    &format!("Finding and deleting {} messages", delete_n),
-                )
+                .send_loading(ctx, "Purge", &format!("Finding and deleting {} messages", delete_n))
                 .await
                 .unwrap();
 
-            let channel = &ctx
-                .http
-                .get_channel(msg.channel_id.0)
-                .await
-                .unwrap()
-                .guild()
-                .unwrap();
+            let channel = &ctx.http.get_channel(msg.channel_id.0).await.unwrap().guild().unwrap();
 
-            let messages = channel
-                .messages(ctx, |r| r.before(&msg.id).limit(100))
-                .await?;
+            let messages = channel.messages(ctx, |r| r.before(&msg.id).limit(100)).await?;
 
             let mut purge_count = 0;
 
@@ -509,10 +486,7 @@ async fn purge(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                     let ctx = ctx.clone();
 
                     runtime.spawn(async move {
-                        ctx.http
-                            .delete_message(message.channel_id.0, message.id.0)
-                            .await
-                            .unwrap_or(());
+                        ctx.http.delete_message(message.channel_id.0, message.id.0).await.unwrap_or(());
                     });
 
                     purge_count += 1;
@@ -531,7 +505,7 @@ async fn purge(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                         .content(format!(":white_check_mark: Deleted {} {}", delete_n, end))
                 })
                 .await;
-        }
+        },
     }
 }
 
@@ -540,6 +514,7 @@ async fn purge(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 #[usage("<expression>")]
 #[example("3^(1 + 2)")]
 #[min_args(1)]
+
 async fn math(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let expr = args.rest();
 
@@ -547,8 +522,7 @@ async fn math(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
     msg.channel_id
         .send_tmp(ctx, |m: &mut MessageCreator| {
-            m.title("Math")
-                .content(format!("Espression: {}\nResult: {}", expr, res))
+            m.title("Math").content(format!("Espression: {}\nResult: {}", expr, res))
         })
         .await
 }
@@ -557,9 +531,12 @@ async fn math(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[description("Run a poll, options split with `|`. Max of 10 options")]
 #[usage("<question> | <option> | <option> | <option>")]
 #[example("Do you like chocolate? | Yes | No")]
+
 async fn poll(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let args = args.rest();
+
     let spl = args.split('|').collect::<Vec<&str>>();
+
     if args.contains("|") && spl.len() >= 3 && spl.len() <= 11 {
         let emojis = (0..(spl.len() - 1))
             .map(|i| std::char::from_u32('🇦' as u32 + i as u32).expect("Failed to format emoji"))
@@ -580,9 +557,7 @@ async fn poll(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             .unwrap();
 
         for &emoji in &emojis {
-            poll_msg
-                .react(&ctx.http, ReactionType::Unicode(emoji.to_string()))
-                .await?;
+            poll_msg.react(&ctx.http, ReactionType::Unicode(emoji.to_string())).await?;
         }
 
         return Ok(());
@@ -603,8 +578,10 @@ async fn poll(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[example("serenity")]
 #[example("std Result")]
 #[min_args(1)]
+
 async fn rustdoc(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let lib = args.single::<String>().unwrap().to_lowercase();
+
     let search = if args.len() > 0 {
         format!("?search={}", encode(args.rest()))
     } else {
@@ -614,16 +591,8 @@ async fn rustdoc(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
     msg.channel_id
         .send_tmp(ctx, |m: &mut MessageCreator| {
             m.title("Rust Doc")
-                .field(
-                    "Crates.io",
-                    format!("https://crates.io/crates/{}", lib),
-                    true,
-                )
-                .field(
-                    "docs.rs",
-                    format!("https://docs.rs/{}{}", lib, search),
-                    true,
-                )
+                .field("Crates.io", format!("https://crates.io/crates/{}", lib), true)
+                .field("docs.rs", format!("https://docs.rs/{}{}", lib, search), true)
         })
         .await
 }
@@ -636,6 +605,7 @@ async fn rustdoc(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
 #[example("500 JPY USD")]
 #[min_args(2)]
 #[max_args(3)]
+
 async fn exchange(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     // Surely there's a better way to do this
     // Have to use String rather than &str bc
@@ -675,41 +645,37 @@ async fn exchange(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
         "TRY".to_string(),
         "ZAR".to_string(),
     ];
+
     let amount = if let Ok(amt) = args.single::<f64>() {
         amt
     } else {
         return msg
             .channel_id
             .send_tmp(ctx, |m: &mut MessageCreator| {
-                m.error()
-                    .title("Exchange")
-                    .content("Invalid amount specified")
+                m.error().title("Exchange").content("Invalid amount specified")
             })
             .await;
     };
+
     let from = args.single::<String>().unwrap().to_uppercase();
+
     let to_wrapped = args.single::<String>();
 
     if !currencies.contains(&from) {
         return msg
             .channel_id
             .send_tmp(ctx, |m: &mut MessageCreator| {
-                m.error()
-                    .title("Exchange")
-                    .content("Invalid `from` currency speicifed")
+                m.error().title("Exchange").content("Invalid `from` currency speicifed")
             })
             .await;
     }
 
-    let res = reqwest::get(&format!(
-        "https://api.frankfurter.app/latest?from={}&amount={}",
-        from, amount
-    ))
-    .await?
-    .text()
-    .await?;
-    let res: FrankFurterResponse =
-        serde_json::from_str::<FrankFurterResponse>(&res).expect("Couldn't parse response");
+    let res = reqwest::get(&format!("https://api.frankfurter.app/latest?from={}&amount={}", from, amount))
+        .await?
+        .text()
+        .await?;
+
+    let res: FrankFurterResponse = serde_json::from_str::<FrankFurterResponse>(&res).expect("Couldn't parse response");
 
     match to_wrapped {
         Ok(to) => {
@@ -719,9 +685,7 @@ async fn exchange(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
                 return msg
                     .channel_id
                     .send_tmp(ctx, |m: &mut MessageCreator| {
-                        m.error()
-                            .title("Exchange")
-                            .content("Invalid `to` currency speicifed")
+                        m.error().title("Exchange").content("Invalid `to` currency speicifed")
                     })
                     .await;
             }
@@ -731,15 +695,14 @@ async fn exchange(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
             return msg
                 .channel_id
                 .send_tmp(ctx, |m: &mut MessageCreator| {
-                    m.title("Exchange").content(format!(
-                        "{:.2} {} is roughly equal to {:.2} {}",
-                        amount, from, val, to
-                    ))
+                    m.title("Exchange")
+                        .content(format!("{:.2} {} is roughly equal to {:.2} {}", amount, from, val, to))
                 })
                 .await;
-        }
+        },
         Err(_) => {
             let mut rates: Vec<(String, f64)> = Vec::new();
+
             for (cur, val) in &res.rates {
                 rates.push((cur.to_string(), *val));
             }
@@ -747,20 +710,24 @@ async fn exchange(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
             rates.sort_by(|(cur1, _val1), (cur2, _val2)| cur1.partial_cmp(cur2).unwrap());
 
             let msg_count = (rates.len() as f64 / 9.0).ceil();
+
             let mut msgs = Vec::new();
+
             for idx in 0..msg_count as u64 {
                 let mut msg = MessageCreator::default();
+
                 msg.title("Exchange").content(&format!(
-                    "**Base**\n\
-                            {} {}\n\n\
-                            Exchange rates as of {}",
+                    "**Base**\n{} {}\n\nExchange rates as of {}",
                     res.amount, res.base, res.date
                 ));
 
                 let field_count = min(rates.len() as u64, (idx + 1) * 9) - idx * 9;
+
                 for i in 0..field_count {
                     let rate_idx = idx * 9 + i;
+
                     let rate = &rates[rate_idx as usize];
+
                     msg.field(&format!("**{}**", rate.0), &format!("{:.2}", rate.1), true);
                 }
 
@@ -768,33 +735,23 @@ async fn exchange(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
             }
 
             return msg.channel_id.send_paginator_noret(ctx, msg, msgs).await;
-        }
+        },
     }
 }
 
 #[command]
-#[description(
-    "Force set your Hype Squad house.\n\
-    Available houses:\n\
-    Bravery\n\
-    Brilliance\n\
-    Random"
-)]
+#[description("Force set your Hype Squad house.\nAvailable houses:\nBravery\nBrilliance\nRandom")]
 #[usage("<house>")]
 #[example("Bravery")]
 #[num_args(1)]
+
 async fn hypesquad(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    let houses = vec![
-        "Bravery".to_string(),
-        "Brilliance".to_string(),
-        "Balance".to_string(),
-    ];
-    let houses_lower = houses
-        .iter()
-        .map(|h| h.to_lowercase())
-        .collect::<Vec<String>>();
+    let houses = vec!["Bravery".to_string(), "Brilliance".to_string(), "Balance".to_string()];
+
+    let houses_lower = houses.iter().map(|h| h.to_lowercase()).collect::<Vec<String>>();
 
     let house = args.current().unwrap_or("").to_lowercase();
+
     let house_id = if house.to_lowercase().eq("random") {
         rand::thread_rng().gen_range(1..4)
     } else if houses_lower.contains(&house) {
@@ -803,9 +760,7 @@ async fn hypesquad(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         return msg
             .channel_id
             .send_tmp(ctx, |m: &mut MessageCreator| {
-                m.error()
-                    .title("Hype Squad Changer")
-                    .content("Invalid house specified")
+                m.error().title("Hype Squad Changer").content("Invalid house specified")
             })
             .await;
     };
@@ -820,11 +775,11 @@ async fn hypesquad(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     return match res {
         Ok(res) => {
             let status = res.status().as_u16();
+
             if status == 204 {
                 msg.channel_id
                     .send_tmp(ctx, |m: &mut MessageCreator| {
-                        m.title("Hype Squad Changer")
-                            .content(format!("Set house to {}", house))
+                        m.title("Hype Squad Changer").content(format!("Set house to {}", house))
                     })
                     .await
             } else {
@@ -836,7 +791,7 @@ async fn hypesquad(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                     })
                     .await
             }
-        }
+        },
         Err(_) => {
             msg.channel_id
                 .send_tmp(ctx, |m: &mut MessageCreator| {
@@ -845,6 +800,6 @@ async fn hypesquad(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                         .content("Error occurred while changing house")
                 })
                 .await
-        }
+        },
     };
 }

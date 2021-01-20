@@ -6,9 +6,8 @@ mod tags;
 // use automsg::*;
 use emotestealer::*;
 use general::*;
-use tags::*;
-
 use serenity::framework::standard::macros::group;
+use tags::*;
 
 #[group]
 #[commands(
@@ -30,4 +29,5 @@ use serenity::framework::standard::macros::group;
     usages
 )]
 #[description("**Utilities**")]
+
 struct Utility;

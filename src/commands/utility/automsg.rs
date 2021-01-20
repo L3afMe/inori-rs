@@ -1,13 +1,14 @@
-use serenity::prelude::*;
 use serenity::{
     framework::standard::{macros::command, Args, CommandResult},
     model::channel::Message,
+    prelude::*,
 };
 
 #[command]
 #[aliases("delete", "remove", "del", "rem", "d", "r")]
 #[description("Delete an AutoMessage")]
 #[num_args(1)]
+
 async fn delete(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id.say(&ctx.http, ":cat:").await?;
 
@@ -18,6 +19,7 @@ async fn delete(ctx: &Context, msg: &Message) -> CommandResult {
 #[aliases("add", "a")]
 #[description("Add a new AutoMessage")]
 #[num_args(1)]
+
 async fn add(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id.say(&ctx.http, ":dog:").await?;
 
@@ -27,6 +29,7 @@ async fn add(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[aliases("list", "l")]
 #[description("List all AutoMessages")]
+
 async fn list(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id.say(&ctx.http, ":dog:").await?;
 
@@ -38,6 +41,7 @@ async fn list(ctx: &Context, msg: &Message) -> CommandResult {
 #[description("Send messages at specific intervals")]
 #[min_args(1)]
 #[sub_commands(add, delete, list)]
+
 async fn automessage(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let say_content = if args.is_empty() {
         "".to_string()

@@ -1,6 +1,8 @@
 extern crate serde;
 extern crate serde_xml_rs;
 
+use once_cell::sync::Lazy;
+use rand::Rng;
 use serenity::{
     framework::standard::{macros::command, Args, CommandResult},
     model::channel::Message,
@@ -13,40 +15,30 @@ use crate::{
     InoriChannelUtils, InoriMessageUtils, MessageCreator,
 };
 
-use once_cell::sync::Lazy;
-
-use rand::Rng;
-
 async fn get_rule_34_posts(tags: String) -> Rule34Posts {
     println!(
         "{}",
-        format!(
-            "https://rule34.xxx/index.php?page=dapi&s=post&q=index&tags={}",
-            tags
-        )
+        format!("https://rule34.xxx/index.php?page=dapi&s=post&q=index&tags={}", tags)
     );
-    let xml = reqwest::get(&format!(
-        "https://rule34.xxx/index.php?page=dapi&s=post&q=index&tags={}",
-        tags
-    ))
-    .await
-    .unwrap()
-    .text()
-    .await
-    .unwrap();
+
+    let xml = reqwest::get(&format!("https://rule34.xxx/index.php?page=dapi&s=post&q=index&tags={}", tags))
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
 
     serde_xml_rs::from_str::<Rule34Posts>(&xml).unwrap()
 }
 
 #[command]
 #[aliases("r34")]
-#[description(
-    "Gets an image from rule34.xxx with the specified tags. Tags are separated by spaces"
-)]
+#[description("Gets an image from rule34.xxx with the specified tags. Tags are separated by spaces")]
 #[usage("<tags>")]
 #[example("catgirl thighs")]
 #[checks(NSFW_Strict)]
 #[min_args(1)]
+
 async fn rule34(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let mut new_msg = msg
         .channel_id
@@ -55,22 +47,22 @@ async fn rule34(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         .unwrap();
 
     let tags = args.rest().split(" ").collect::<Vec<&str>>();
+
     let res = get_rule_34_posts(tags.join("+")).await;
+
     let posts: Vec<Rule34Post> = if let Some(posts) = res.posts {
         posts
     } else {
         return new_msg
             .update_tmp(ctx, |m: &mut MessageCreator| {
-                m.error().title("Rule 34").content(
-                    "Well you fucking did it, you found something that doesn't exist in porn",
-                )
+                m.error()
+                    .title("Rule 34")
+                    .content("Well you fucking did it, you found something that doesn't exist in porn")
             })
             .await;
     };
 
-    let post: &Rule34Post = posts
-        .get(rand::thread_rng().gen_range(0..posts.len()))
-        .unwrap();
+    let post: &Rule34Post = posts.get(rand::thread_rng().gen_range(0..posts.len())).unwrap();
 
     new_msg
         .update_noret(ctx, |m: &mut MessageCreator| {
@@ -167,14 +159,9 @@ static VALID_IMAGES: Lazy<Vec<Img>> = Lazy::new(|| {
     ]
 });
 
-async fn do_image(
-    ctx: &Context,
-    msg: &Message,
-    img: &Img,
-    amount: u64,
-    is_image_bomb: bool,
-) -> CommandResult {
+async fn do_image(ctx: &Context, msg: &Message, img: &Img, amount: u64, is_image_bomb: bool) -> CommandResult {
     let title = if is_image_bomb { "Image Bomb" } else { "Image" };
+
     let image_str = if amount > 1 { "images" } else { "image" };
 
     let mut new_msg = msg
@@ -184,6 +171,7 @@ async fn do_image(
         .unwrap();
 
     let mut urls = Vec::new();
+
     for _ in 0..amount {
         let url = match img.website_type {
             0 => {
@@ -198,22 +186,20 @@ async fn do_image(
                     .text()
                     .await?;
 
-                let res: NekosLifeResponse =
-                    serde_json::from_str(&res).expect("Couldn't parse response.");
+                let res: NekosLifeResponse = serde_json::from_str(&res).expect("Couldn't parse response.");
 
                 res.url
-            }
+            },
             _ => {
                 let res = reqwest::get(&format!("https://nekobot.xyz/api/image?type={}", img.link))
                     .await?
                     .text()
                     .await?;
 
-                let res: NekoBotResponse =
-                    serde_json::from_str(&res).expect("Couldn't parse response.");
+                let res: NekoBotResponse = serde_json::from_str(&res).expect("Couldn't parse response.");
 
                 res.message
-            }
+            },
         };
 
         urls.push(url);
@@ -221,9 +207,7 @@ async fn do_image(
 
     let _ = new_msg
         .update(ctx, |m: &mut MessageCreator| {
-            m.title(title)
-                .content(format!("Tag: {}", img.link))
-                .image(&urls[0])
+            m.title(title).content(format!("Tag: {}", img.link)).image(&urls[0])
         })
         .await;
 
@@ -232,9 +216,7 @@ async fn do_image(
             let _ = msg
                 .channel_id
                 .send(ctx, |m: &mut MessageCreator| {
-                    m.title(title)
-                        .content(format!("Tag: {}", img.link))
-                        .image(url)
+                    m.title(title).content(format!("Tag: {}", img.link)).image(url)
                 })
                 .await;
         }
@@ -249,11 +231,9 @@ async fn do_image(
 #[usage("<type> <amount>")]
 #[example("erok 10")]
 #[max_args(2)]
+
 async fn imagebomb(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let valid_ids = VALID_IMAGES
-        .iter()
-        .map(|s| String::from(&s.link))
-        .collect::<Vec<String>>();
+    let valid_ids = VALID_IMAGES.iter().map(|s| String::from(&s.link)).collect::<Vec<String>>();
 
     if !args.is_empty() {
         let arg = args.single::<String>().unwrap().to_lowercase();
@@ -264,33 +244,25 @@ async fn imagebomb(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
                     return msg
                         .channel_id
                         .send_tmp(ctx, |m: &mut MessageCreator| {
-                            m.error()
-                                .title("Image Bomb")
-                                .content("Amount cannot be less than 1")
+                            m.error().title("Image Bomb").content("Amount cannot be less than 1")
                         })
                         .await;
                 } else {
                     amount
                 }
-            }
+            },
             Err(_) => {
                 return msg
                     .channel_id
                     .send_tmp(ctx, |m: &mut MessageCreator| {
-                        m.error()
-                            .title("Image Bomb")
-                            .content("Unable to parse given value to number")
+                        m.error().title("Image Bomb").content("Unable to parse given value to number")
                     })
                     .await;
-            }
+            },
         };
 
         if valid_ids.contains(&arg) {
-            let selected: &Img = VALID_IMAGES
-                .iter()
-                .filter(|&s| s.link.eq(&arg))
-                .next()
-                .unwrap();
+            let selected: &Img = VALID_IMAGES.iter().filter(|&s| s.link.eq(&arg)).next().unwrap();
 
             let is_too_nsfw = match selected.level {
                 0 => false,
@@ -310,9 +282,8 @@ async fn imagebomb(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
                     .channel_id
                     .send_tmp(ctx, |m: &mut MessageCreator| {
                         m.error().title("Image Bomb").content(format!(
-                            "This server is marked not marked as NSFW and \
-                            you've specified a NSFW image.\nThis can be overriden \
-                            by executing `nsfwfilter {}`",
+                            "This server is marked not marked as NSFW and you've specified a NSFW image.\nThis can be \
+                             overriden by executing `nsfwfilter {}`",
                             selected.level
                         ))
                     })
@@ -352,21 +323,15 @@ async fn imagebomb(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
 #[usage("<type>")]
 #[example("erok")]
 #[max_args(1)]
+
 async fn image(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    let valid_ids = VALID_IMAGES
-        .iter()
-        .map(|s| String::from(&s.link))
-        .collect::<Vec<String>>();
+    let valid_ids = VALID_IMAGES.iter().map(|s| String::from(&s.link)).collect::<Vec<String>>();
 
     if !args.is_empty() {
         let arg = args.current().unwrap().to_lowercase();
 
         if valid_ids.contains(&arg) {
-            let selected: &Img = VALID_IMAGES
-                .iter()
-                .filter(|&s| s.link.eq(&arg))
-                .next()
-                .unwrap();
+            let selected: &Img = VALID_IMAGES.iter().filter(|&s| s.link.eq(&arg)).next().unwrap();
 
             let is_too_nsfw = match selected.level {
                 0 => false,
@@ -386,9 +351,8 @@ async fn image(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                     .channel_id
                     .send_tmp(ctx, |m: &mut MessageCreator| {
                         m.error().title("Image").content(format!(
-                            "This server is marked not marked as NSFW and \
-                            you've specified a NSFW image.\nThis can be overriden \
-                            by executing `nsfwfilter {}`",
+                            "This server is marked not marked as NSFW and you've specified a NSFW image.\nThis can be \
+                             overriden by executing `nsfwfilter {}`",
                             selected.level
                         ))
                     })

@@ -1,3 +1,8 @@
+use std::{
+    fs::{create_dir, remove_file},
+    path::Path,
+};
+
 use serenity::{
     framework::standard::{macros::command, Args, CommandResult},
     http::AttachmentType,
@@ -7,11 +12,6 @@ use serenity::{
 };
 use tokio::{fs::File, prelude::*};
 
-use std::{
-    fs::{create_dir, remove_file},
-    path::Path,
-};
-
 use crate::{save_settings, InoriChannelUtils, InoriMessageUtils, MessageCreator, Settings};
 
 #[command]
@@ -19,6 +19,7 @@ use crate::{save_settings, InoriChannelUtils, InoriMessageUtils, MessageCreator,
 #[description("Automatically switch profile pictures at a specified interval")]
 #[min_args(1)]
 #[sub_commands(enable, disable, toggle, change, delay, mode, list, view, add, delete)]
+
 async fn pfpswitcher(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     msg.channel_id
         .send_tmp(ctx, |m: &mut MessageCreator| {
@@ -32,15 +33,14 @@ async fn pfpswitcher(ctx: &Context, msg: &Message, args: Args) -> CommandResult 
 #[command]
 #[aliases("t")]
 #[description("Toggles profile picture switching")]
+
 async fn toggle(ctx: &Context, msg: &Message) -> CommandResult {
     let data = ctx.data.write().await;
-    let mut settings = data
-        .get::<Settings>()
-        .expect("Expected Setting in TypeMap.")
-        .lock()
-        .await;
+
+    let mut settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
 
     settings.pfp_switcher.enabled = !settings.pfp_switcher.enabled;
+
     save_settings(&settings);
 
     let content = if settings.pfp_switcher.enabled {
@@ -50,6 +50,7 @@ async fn toggle(ctx: &Context, msg: &Message) -> CommandResult {
     };
 
     drop(settings);
+
     drop(data);
 
     msg.channel_id
@@ -61,23 +62,24 @@ async fn toggle(ctx: &Context, msg: &Message) -> CommandResult {
 
 #[command]
 #[description("Enables profile picture switching")]
+
 async fn enable(ctx: &Context, msg: &Message) -> CommandResult {
     let data = ctx.data.write().await;
-    let mut settings = data
-        .get::<Settings>()
-        .expect("Expected Setting in TypeMap.")
-        .lock()
-        .await;
+
+    let mut settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
 
     let content = if settings.pfp_switcher.enabled {
         "Already enabled"
     } else {
         settings.pfp_switcher.enabled = true;
+
         save_settings(&settings);
+
         "Enabled"
     };
 
     drop(settings);
+
     drop(data);
 
     msg.channel_id
@@ -89,23 +91,24 @@ async fn enable(ctx: &Context, msg: &Message) -> CommandResult {
 
 #[command]
 #[description("Disables profile picture switching")]
+
 async fn disable(ctx: &Context, msg: &Message) -> CommandResult {
     let data = ctx.data.write().await;
-    let mut settings = data
-        .get::<Settings>()
-        .expect("Expected Setting in TypeMap.")
-        .lock()
-        .await;
+
+    let mut settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
 
     let content = if settings.pfp_switcher.enabled {
         settings.pfp_switcher.enabled = false;
+
         save_settings(&settings);
+
         "Disabled"
     } else {
         "Already disabled"
     };
 
     drop(settings);
+
     drop(data);
 
     msg.channel_id
@@ -117,22 +120,15 @@ async fn disable(ctx: &Context, msg: &Message) -> CommandResult {
 
 #[command]
 #[aliases("m")]
-#[description(
-    "Set the mode of which pictures get chosen\n\
-    **Modes**\n\
-    0 - Random order\n\
-    1 - Alphabetical order"
-)]
+#[description("Set the mode of which pictures get chosen\n**Modes**\n0 - Random order\n1 - Alphabetical order")]
 #[usage("<mode>")]
 #[example("1")]
 #[num_args(1)]
+
 async fn mode(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let data = ctx.data.write().await;
-    let mut settings = data
-        .get::<Settings>()
-        .expect("Expected Setting in TypeMap.")
-        .lock()
-        .await;
+
+    let mut settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
 
     let content = if args.is_empty() {
         let sort = match settings.pfp_switcher.mode {
@@ -145,6 +141,7 @@ async fn mode(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
         if let Ok(val) = args.single::<u8>() {
             if val <= 1 {
                 settings.pfp_switcher.mode = val;
+
                 save_settings(&settings);
 
                 let sort = match val {
@@ -155,36 +152,34 @@ async fn mode(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                 format!("Sort mode set to `{}`", sort)
             } else {
                 drop(settings);
+
                 drop(data);
 
                 return msg
                     .channel_id
                     .send_tmp(ctx, |m: &mut MessageCreator| {
-                        m.error().title("Profile Picture Switcher").content(
-                            "Invalid mode specified.\n\
-                            **Valid modes**\n\
-                            `0` - Random\n\
-                            `1` - Alphabetical",
-                        )
+                        m.error()
+                            .title("Profile Picture Switcher")
+                            .content("Invalid mode specified.\n**Valid modes**\n`0` - Random\n`1` - Alphabetical")
                     })
                     .await;
             }
         } else {
             drop(settings);
+
             drop(data);
 
             return msg
                 .channel_id
                 .send_tmp(ctx, |m: &mut MessageCreator| {
-                    m.error()
-                        .title("Profile Picture Switcher")
-                        .content("Unable to parse mode")
+                    m.error().title("Profile Picture Switcher").content("Unable to parse mode")
                 })
                 .await;
         }
     };
 
     drop(settings);
+
     drop(data);
 
     msg.channel_id
@@ -196,11 +191,12 @@ async fn mode(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 
 #[command]
 #[description(
-    "Get or set the delay between switching profile pictures in minutes.\
-    Minimum set to 30 minutes to avoid rate limiting (Default 45 minutes)"
+    "Get or set the delay between switching profile pictures in minutes.Minimum set to 30 minutes to avoid rate \
+     limiting (Default 45 minutes)"
 )]
 #[usage("<minutes>")]
 #[example("10")]
+
 async fn delay(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let arg = if args.is_empty() {
         "current"
@@ -209,17 +205,11 @@ async fn delay(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     };
 
     let data = ctx.data.write().await;
-    let mut settings = data
-        .get::<Settings>()
-        .expect("Expected Setting in TypeMap.")
-        .lock()
-        .await;
+
+    let mut settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
 
     let content = if arg.to_lowercase().eq("current") {
-        format!(
-            "Delay currently set to {} minutes",
-            settings.pfp_switcher.delay
-        )
+        format!("Delay currently set to {} minutes", settings.pfp_switcher.delay)
     } else if let Ok(delay) = arg.parse::<u32>() {
         if delay < 10 {
             return msg
@@ -232,6 +222,7 @@ async fn delay(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 .await;
         } else {
             settings.pfp_switcher.delay = delay;
+
             save_settings(&settings);
 
             format!("Delay set to {} minutes", delay)
@@ -248,6 +239,7 @@ async fn delay(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     };
 
     drop(settings);
+
     drop(data);
 
     msg.channel_id
@@ -263,6 +255,7 @@ async fn delay(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[usage("<file name>")]
 #[example("rias.png")]
 #[num_args(1)]
+
 async fn add(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     if msg.attachments.len() != 1 {
         return msg
@@ -278,8 +271,11 @@ async fn add(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let mut file_name = args.current().unwrap().to_string();
 
     let atch = msg.attachments.get(0).unwrap();
+
     let atch_url = &atch.url;
+
     let url = atch_url.split("?").next().unwrap().to_string();
+
     let ext = &url.to_string()[url.rfind(".").unwrap()..];
 
     if !file_name.ends_with(ext) {
@@ -303,17 +299,14 @@ async fn add(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
     let mut new_msg = msg
         .channel_id
-        .send_loading(
-            ctx,
-            "Profile Picture Switcher",
-            "Uploading new profile picture",
-        )
+        .send_loading(ctx, "Profile Picture Switcher", "Uploading new profile picture")
         .await
         .unwrap();
 
     let img = reqwest::get(atch_url).await?.bytes().await?;
 
     let mut file = File::create(format!("./pfps/{}", file_name)).await.unwrap();
+
     file.write_all(&img).await?;
 
     new_msg
@@ -331,6 +324,7 @@ async fn add(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[usage("<file name>")]
 #[example("rias.png")]
 #[num_args(1)]
+
 async fn change(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let img_str = args.current().unwrap().to_string();
 
@@ -346,6 +340,7 @@ async fn change(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     }
 
     let path_str = format!("./pfps/{}", img_str);
+
     let path = Path::new(&path_str);
 
     if !path.exists() {
@@ -366,21 +361,14 @@ async fn change(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         .unwrap();
 
     let mut user = ctx.cache.current_user().await;
+
     let avatar = read_image((&path_str).to_string())?;
 
-    user.edit(&ctx.http, |p| p.avatar(Some(&avatar)))
-        .await
-        .unwrap();
+    user.edit(&ctx.http, |p| p.avatar(Some(&avatar))).await.unwrap();
 
     println!("[PfpSwitcher] Changing pfps");
 
-    let pfp_url = ctx
-        .http
-        .get_current_user()
-        .await
-        .unwrap()
-        .avatar_url()
-        .unwrap();
+    let pfp_url = ctx.http.get_current_user().await.unwrap().avatar_url().unwrap();
 
     new_msg
         .update_noret(ctx, |m: &mut MessageCreator| {
@@ -397,6 +385,7 @@ async fn change(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[usage("<file name>")]
 #[example("rias")]
 #[num_args(1)]
+
 async fn delete(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let img_str = args.current().unwrap().to_string();
 
@@ -412,6 +401,7 @@ async fn delete(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     }
 
     let path_str = format!("./pfps/{}", img_str);
+
     let path = Path::new(&path_str);
 
     if !path.exists() {
@@ -441,6 +431,7 @@ async fn delete(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[usage("<file name>")]
 #[example("rias")]
 #[num_args(1)]
+
 async fn view(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let img_str = args.current().unwrap().to_string();
 
@@ -475,7 +466,7 @@ async fn view(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             m.title("Profile Picture Switcher")
                 .content(img_str.clone())
                 .attachment(AttachmentType::File {
-                    file: &img,
+                    file:     &img,
                     filename: img_str.clone(),
                 })
         })
@@ -485,12 +476,12 @@ async fn view(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[command]
 #[aliases("list", "l")]
 #[description("List all picture names")]
+
 async fn list(ctx: &Context, msg: &Message) -> CommandResult {
     let mut list = "".to_string();
-    let dir_list: Vec<Result<std::fs::DirEntry, std::io::Error>> = Path::new("./pfps/")
-        .read_dir()
-        .expect("Unable to execute read_dir")
-        .collect();
+
+    let dir_list: Vec<Result<std::fs::DirEntry, std::io::Error>> =
+        Path::new("./pfps/").read_dir().expect("Unable to execute read_dir").collect();
 
     if dir_list.len() == 0 {
         list = "Nothing to see here".to_string();
@@ -501,9 +492,8 @@ async fn list(ctx: &Context, msg: &Message) -> CommandResult {
             list = format!("{}\n{}", list, img.file_name().into_string().unwrap());
         }
     }
+
     msg.channel_id
-        .send_tmp(ctx, |m: &mut MessageCreator| {
-            m.title("Profile Picture Switcher").content(list)
-        })
+        .send_tmp(ctx, |m: &mut MessageCreator| m.title("Profile Picture Switcher").content(list))
         .await
 }

@@ -7,7 +7,6 @@ use general::*;
 use mal::*;
 use pfpswitcher::*;
 use quote::*;
-
 use serenity::framework::standard::macros::group;
 
 #[group]
@@ -22,4 +21,5 @@ use serenity::framework::standard::macros::group;
     urbandictionary
 )]
 #[description("**Fun**")]
+
 struct Fun;
