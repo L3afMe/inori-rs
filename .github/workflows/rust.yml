@@ -55,7 +55,7 @@ jobs:
         args: --verbose
 
   format:
-    name: Checking format on ${{ matrix.os }}
+    name: Checking format
     runs-on: ubuntu-latest
 
     steps:
