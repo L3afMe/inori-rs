@@ -61,7 +61,7 @@ impl EventHandler for Handler {
 }
 
 #[help]
-#[individual_command_tip("**Help**\nTo get help for a specific command, subcommand or group use `help <command>`.")]
+#[individual_command_tip("**Help**\nTo get help for a specific command, subcommand or group, use `help <command>`.")]
 #[suggestion_text("**Error** Unable to find command. Similar commands: `{}`")]
 #[no_help_available_text("**Error** Unable to find command")]
 #[command_not_found_text("**Error** Unable to find command")]
@@ -398,24 +398,26 @@ async fn spawn_pfp_change_thread(ctx: Arc<Mutex<Context>>) {
                         && start_time.elapsed().unwrap().as_secs() >= (settings.pfp_switcher.delay * 60) as u64
                     {
                         let path = Path::new("./pfps/");
-                        let ops = path.read_dir().unwrap().collect::<Vec<Result<DirEntry, Error>>>();
-                        let new_pfp = match settings.pfp_switcher.mode {
-                            0 => ops[rand::thread_rng().gen_range(0..ops.len())].as_ref(),
-                            1 => {
-                                // TODO: This shit
-                                ops[rand::thread_rng().gen_range(0..ops.len())].as_ref()
-                            },
-                            _ => ops[rand::thread_rng().gen_range(0..ops.len())].as_ref(),
+                        if path.exists() {
+                            let ops = path.read_dir().unwrap().collect::<Vec<Result<DirEntry, Error>>>();
+                            let new_pfp = match settings.pfp_switcher.mode {
+                                0 => ops[rand::thread_rng().gen_range(0..ops.len())].as_ref(),
+                                1 => {
+                                    // TODO: This shit
+                                    ops[rand::thread_rng().gen_range(0..ops.len())].as_ref()
+                                },
+                                _ => ops[rand::thread_rng().gen_range(0..ops.len())].as_ref(),
+                            }
+                            .unwrap();
+
+                            let mut user = ctx.cache.current_user().await;
+                            let avatar =
+                                read_image(format!("./pfps/{}", new_pfp.file_name().into_string().unwrap())).unwrap();
+                            user.edit(&ctx.http, |p| p.avatar(Some(&avatar))).await.unwrap();
+
+                            println!("[PfpSwitcher] Changing pfps");
+                            break;
                         }
-                        .unwrap();
-
-                        let mut user = ctx.cache.current_user().await;
-                        let avatar =
-                            read_image(format!("./pfps/{}", new_pfp.file_name().into_string().unwrap())).unwrap();
-                        user.edit(&ctx.http, |p| p.avatar(Some(&avatar))).await.unwrap();
-
-                        println!("[PfpSwitcher] Changing pfps");
-                        break;
                     }
                 }
 
