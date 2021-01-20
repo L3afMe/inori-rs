@@ -4,12 +4,25 @@ use regex::Regex;
 use crate::models::discord::Emote;
 
 static MENTION_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"<@!?\d{18}>").unwrap());
+static CHANNEL_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(<#)?\d{18}>?").unwrap());
 static EMOTE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"<a?:[a-zA-Z0-9_]*?:\d{18}>").unwrap());
 static EMOTE_NAME_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"[^:]{0,}[a-zA-Z0-9][^:]").unwrap());
 static EMOTE_ID_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\d{18}").unwrap());
 
 pub fn is_mention(arg: &str) -> bool {
     MENTION_REGEX.is_match(&arg)
+}
+
+pub fn is_channel(arg: &str) -> bool {
+    CHANNEL_REGEX.is_match(arg)
+}
+
+pub fn get_channel(arg: &str) -> String {
+    let mut arg = arg.strip_prefix('<').unwrap_or_else(|| arg);
+    arg = arg.strip_prefix('#').unwrap_or_else(|| arg);
+    arg = arg.strip_suffix('>').unwrap_or_else(|| arg);
+
+    arg.to_string()
 }
 
 pub fn has_emotes(message: &str) -> bool {

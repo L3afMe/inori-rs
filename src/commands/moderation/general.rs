@@ -1,54 +1,69 @@
 use serenity::{
     framework::standard::{macros::command, Args, CommandResult},
-    model::{channel::Message, id::MessageId},
+    model::channel::Message,
     prelude::Context,
 };
 
-use crate::{InoriChannelUtils, InoriMessageUtils, MessageCreator};
+use crate::commands::utility::purge::_purge;
+
+#[command]
+#[aliases("human")]
+#[description("Purge messages that were sent by non bot accounts")]
+#[usage("[channel] <amount> [regex]")]
+#[example("20")]
+#[example("#general 20")]
+#[example("801105575038041266 20")]
+#[example("20 \\[[a-zA-Z]*]")]
+#[example("#general 20 \\[[a-zA-Z]*]")]
+#[min_args(1)]
+async fn humans(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    _purge(ctx, msg, "Purge Chat", args, async move |message: Message| !message.author.bot).await
+}
+
+#[command]
+#[aliases("bot")]
+#[description("Purge messages that were sent by bot accounts")]
+#[usage("[channel] <amount> [regex]")]
+#[example("20")]
+#[example("#general 20")]
+#[example("801105575038041266 20")]
+#[example("20 \\[[a-zA-Z]*]")]
+#[example("#general 20 \\[[a-zA-Z]*]")]
+#[min_args(1)]
+async fn bots(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    _purge(ctx, msg, "Purge Chat", args, async move |message: Message| message.author.bot).await
+}
+
+#[command]
+#[aliases("embed", "emb")]
+#[description("Purge messages that containing embeds")]
+#[usage("[channel] <amount> [regex]")]
+#[example("20")]
+#[example("#general 20")]
+#[example("801105575038041266 20")]
+#[example("20 \\[[a-zA-Z]*]")]
+#[example("#general 20 \\[[a-zA-Z]*]")]
+#[min_args(1)]
+async fn embeds(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    _purge(ctx, msg, "Purge Chat", args, async move |message: Message| {
+        !message.embeds.is_empty()
+    })
+    .await
+}
 
 #[command]
 #[aliases("prunechat", "clearchat")]
-#[description("Deletes a specified amount of messages")]
-#[usage("<amount>")]
+#[description("Deletes a specified amount of messages sent by anyone")]
+#[usage("[chanel] <amount> [regex]")]
 #[example("20")]
+#[example("#general 20")]
+#[example("801105575038041266 20")]
+#[example("20 \\[[a-zA-Z]*]")]
+#[example("#general 20 \\[[a-zA-Z]*]")]
 #[required_permissions("MANAGE_MESSAGES")]
-#[num_args(1)]
-async fn purgechat(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let delete_num = args.single::<u64>();
-
-    match delete_num {
-        Err(_) => {
-            return msg
-                .channel_id
-                .send_tmp(ctx, |m: &mut MessageCreator| {
-                    m.error()
-                        .title("Purge Chat")
-                        .content(":no_entry_sign: The value provided was not a valid number")
-                })
-                .await;
-        },
-
-        Ok(delete_n) => {
-            let mut find_msg = msg
-                .channel_id
-                .send_loading(ctx, "Purge Chat", &format!("Finding and deleting {} messages", delete_n))
-                .await
-                .unwrap();
-
-            let channel = &ctx.http.get_channel(msg.channel_id.0).await.unwrap().guild().unwrap();
-            let messages = &channel.messages(ctx, |r| r.before(&msg.id).limit(delete_n)).await?;
-            let message_ids = messages.iter().map(|m| m.id).collect::<Vec<MessageId>>();
-
-            for message_id in message_ids {
-                ctx.http.delete_message(msg.channel_id.0, message_id.0).await?;
-            }
-
-            return find_msg
-                .update_tmp(ctx, |m: &mut MessageCreator| {
-                    m.title("Purge Chat")
-                        .content(format!(":white_check_mark: Deleted {} messages", delete_n))
-                })
-                .await;
-        },
-    }
+#[min_args(1)]
+#[max_args(3)]
+#[sub_commands(bots, embeds, humans)]
+async fn purgechat(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    _purge(ctx, msg, "Purge Chat", args, async move |_: Message| true).await
 }

@@ -2,19 +2,16 @@ extern crate meval;
 extern crate urlencoding;
 use std::{cmp::min, time::Instant};
 
-use rand::Rng;
 use serenity::{
     client::bridge::gateway::ShardId,
     constants::GATEWAY_VERSION,
     framework::standard::{macros::command, Args, CommandResult},
     model::{
         channel::{ChannelType, Message},
-        id::MessageId,
         prelude::OnlineStatus,
     },
     prelude::Context,
 };
-use tokio::runtime::Builder;
 use urlencoding::encode;
 
 use crate::{
@@ -247,73 +244,6 @@ async fn usages(ctx: &Context, msg: &Message) -> CommandResult {
             m
         })
         .await
-}
-
-#[command]
-#[aliases("prune", "clear")]
-#[description("Deletes a specified amount of messages sent by yourself")]
-#[usage("<amount>")]
-#[example("20")]
-#[num_args(1)]
-async fn purge(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let delete_num = args.single::<u64>();
-
-    match delete_num {
-        Err(_) => {
-            return msg
-                .channel_id
-                .send_tmp(ctx, |m: &mut MessageCreator| {
-                    m.error()
-                        .title("Purge")
-                        .content(":no_entry_sign: The value provided is not a valid number")
-                })
-                .await;
-        },
-        Ok(delete_n) => {
-            let mut find_msg = msg
-                .channel_id
-                .send_loading(ctx, "Purge", &format!("Finding and deleting {} messages", delete_n))
-                .await
-                .unwrap();
-
-            let channel = &ctx.http.get_channel(msg.channel_id.0).await.unwrap().guild().unwrap();
-            let messages = channel.messages(ctx, |r| r.before(&msg.id).limit(100)).await?;
-            let mut purge_count = 0;
-
-            let runtime = Builder::new()
-                .threaded_scheduler()
-                .core_threads(16)
-                .thread_name("purge-thread")
-                .thread_stack_size(1024 * 1024 / 2)
-                .build()
-                .unwrap();
-
-            for message in messages {
-                if message.is_own(&ctx.cache).await && purge_count < delete_n {
-                    let ctx = ctx.clone();
-
-                    runtime.spawn(async move {
-                        ctx.http.delete_message(message.channel_id.0, message.id.0).await.unwrap_or(());
-                    });
-
-                    purge_count += 1;
-                }
-
-                if purge_count >= delete_n {
-                    break;
-                }
-            }
-
-            let end = if delete_n == 1 { "message" } else { "messages" };
-
-            return find_msg
-                .update_tmp(ctx, |m: &mut MessageCreator| {
-                    m.title("Purge")
-                        .content(format!(":white_check_mark: Deleted {} {}", delete_n, end))
-                })
-                .await;
-        },
-    }
 }
 
 #[command]
