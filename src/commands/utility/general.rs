@@ -70,7 +70,8 @@ async fn serverinfo(ctx: &Context, msg: &Message) -> CommandResult {
 
     let cached_guild = msg.guild_id.unwrap().to_guild_cached(&ctx.cache).await.unwrap();
 
-    // let owner: User = cached_guild.owner_id.to_user(&ctx).await?;
+    // let owner: User =
+    // cached_guild.owner_id.to_user(&ctx).await?;
 
     let mut animated_emotes = 0;
     let mut regular_emotes = 0;
@@ -157,7 +158,8 @@ async fn serverinfo(ctx: &Context, msg: &Message) -> CommandResult {
             // owner.name,
             // format!("{:0>4}", owner.discriminator)
             // ))
-            // .icon_url(owner.avatar_url().unwrap_or(String::new()))
+            // .icon_url(owner.avatar_url().unwrap_or(String::
+            // new()))
             // });
 
             m.field("Emotes", emote_string, true)

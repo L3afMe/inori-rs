@@ -163,7 +163,8 @@ async fn chucknorris(ctx: &Context, msg: &Message, args: Args) -> CommandResult 
 // #[command]
 // #[aliases("ron")]
 // #[description("Random Ron Swanson quotes")]
-// async fn ronswanson(ctx: &Context, msg: &Message) -> CommandResult {
+// async fn ronswanson(ctx: &Context, msg:
+// &Message) -> CommandResult {
 // https://ron-swanson-quotes.herokuapp.com/v2/quotes
 // Ok(())
 // }

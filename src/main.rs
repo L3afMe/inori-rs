@@ -212,7 +212,8 @@ async fn normal_message(ctx: &Context, msg: &Message) {
             return;
         }
 
-        // Check if it's a guild above so this will never throw error
+        // Check if it's a guild above so this will never
+        // throw error
         let guild_id = msg.guild_id.unwrap();
 
         if (config.mode == 1 && !config.whitelisted_guilds.contains(&guild_id.0))
@@ -281,7 +282,8 @@ async fn normal_message(ctx: &Context, msg: &Message) {
             _ => "Unknown".to_string(),
         };
 
-        // Check if it's a guild above so unwrap() will never throw error
+        // Check if it's a guild above so unwrap() will
+        // never throw error
         let guild_name = msg
             .guild_id
             .unwrap()
