@@ -67,7 +67,7 @@ jobs:
           override: true
 
     - name: Install latest RustFmt
-      uses: actions-rs/install@v0.1
+      uses: actions-rs/cargo@v0.1
       with:
         command: component
         args: add rustfmt --toolchain nightly
