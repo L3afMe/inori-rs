@@ -105,7 +105,7 @@ where
 
 #[command]
 #[aliases("embed", "emb")]
-#[description("Purge messages that containing embeds")]
+#[description("Purge messages that contain embeds")]
 #[usage("[channel] <amount> [regex]")]
 #[example("20")]
 #[example("#general 20")]
@@ -122,7 +122,7 @@ async fn embeds(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
 #[command]
 #[aliases("prune", "clear")]
-#[description("Deletes a specified amount of messages sent by yourself")]
+#[description("Purge messages sent by yourself")]
 #[usage("[chanel] <amount> [regex]")]
 #[example("20")]
 #[example("#general 20")]
