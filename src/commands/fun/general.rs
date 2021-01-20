@@ -166,7 +166,7 @@ async fn balance(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id
         .send_tmp(ctx, |m: &mut MessageCreator| {
             m.title("Balance")
-                .content("You a broke ass nigga, don't even bother checking your bal")
+                .content("You a broke ass, don't even bother checking your bal")
         })
         .await
 }
