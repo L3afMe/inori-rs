@@ -1,4 +1,6 @@
-# Rust Selfbot using [Serenity-rs](github.com/serenity-rs/serenity/)
+# Inori-rs - A Rust Selfbot using [Serenity-rs](github.com/serenity-rs/serenity/)
+![Lines of code](https://img.shields.io/tokei/lines/github/L3afMe/inori-rs?style=for-the-badge)
+![Checks](https://img.shields.io/github/checks-status/L3afMe/inori-rs/master?style=for-the-badge)
 
 ## WARNING: Currently in prerelease, there will be features that don't work or are buggy
 
@@ -17,11 +19,22 @@ Named after [Inori Yuzuriha](https://guiltycrown.fandom.com/wiki/Inori_Yuzuriha)
 ### Building from source
 
 Prerequisites
-- Rust Nightly (https://rustup.rs/)
+- Rust nightly (https://rustup.rs/)
   - If using rustup then run `rustup default nightly` to install Nightly
 - Cargo - Installed alongside Rust
 
+How to build
 1) `git clone https://github.com/L3afMe/inori-rs`
 2) `cd inori-rs`
 3) `cargo build --release`
 4) The binaries will be located in `inori-rs/target/releases/` as `inori-rs` on Unix or `inori-rs.exe` on Windows
+
+## Contributing
+
+Pull requests for bug fixes and new features are more than welcomed but please ensure that you have the latest nightly RustFmt installed and have formatted your code before submitting.
+
+## Commands
+
+#### This may be outdated, use `~help` for a list of all commands
+
+TODO
