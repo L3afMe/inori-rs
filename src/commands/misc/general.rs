@@ -1,11 +1,17 @@
 use rand::Rng;
 use serenity::{
     framework::standard::{macros::command, Args, CommandResult},
-    model::{channel::Message, prelude::ReactionType, user::User},
+    model::{channel::Message, prelude::ReactionType},
     prelude::Context,
 };
 
-use crate::{utils::consts, InoriChannelUtils, MessageCreator};
+use crate::{
+    utils::{
+        chat::{get_user, is_user},
+        consts,
+    },
+    InoriChannelUtils, MessageCreator,
+};
 
 #[command]
 #[description("Display information about Inori-rs")]
@@ -41,7 +47,18 @@ async fn about(ctx: &Context, msg: &Message) -> CommandResult {
         .await
 }
 
-async fn print_av(ctx: &Context, msg: &Message, user: &User) -> CommandResult {
+async fn print_av(ctx: &Context, msg: &Message, user: u64) -> CommandResult {
+    let user = if let Ok(user) = ctx.http.get_user(user).await {
+        user
+    } else {
+        return msg
+            .channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error().title("Avatar").content("Couldn't get user")
+            })
+            .await;
+    };
+
     let av = match user.avatar_url() {
         Some(av) => av,
         None => {
@@ -76,13 +93,29 @@ async fn print_av(ctx: &Context, msg: &Message, user: &User) -> CommandResult {
 #[description("Gets the pfp(s) of the mentioned user(s), if no one mentioned then gets self")]
 #[usage("[@users]")]
 #[example("@L3af#0001")]
-async fn avatar(ctx: &Context, msg: &Message) -> CommandResult {
-    if !msg.mentions.is_empty() {
-        for mention in &msg.mentions {
-            let _ = print_av(ctx, msg, mention).await.unwrap_or(());
-        }
+async fn avatar(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    if args.is_empty() {
+        let _ = print_av(ctx, msg, msg.author.id.0).await;
     } else {
-        let _ = print_av(ctx, msg, &msg.author).await;
+        for arg in args.iter::<String>() {
+            let arg = arg.unwrap_or_default();
+
+            if is_user(&arg) {
+                let user = if let Ok(user) = get_user(&arg).parse::<u64>() {
+                    user
+                } else {
+                    let _ = msg
+                        .channel_id
+                        .send_tmp(ctx, |m: &mut MessageCreator| {
+                            m.error().title("Avatar").content("Could not parse user ID")
+                        })
+                        .await;
+                    continue;
+                };
+
+                let _ = print_av(ctx, msg, user).await.unwrap_or(());
+            }
+        }
     }
 
     Ok(())
