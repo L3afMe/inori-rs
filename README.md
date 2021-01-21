@@ -37,8 +37,6 @@ Pull requests for bug fixes and new features are more than welcomed but please e
 
 P.S. PRs for spelling and grammar mistakes are more than welcome!
 
-## Commands
+## Command List
 
-#### This may be outdated, use `~help` for a list of all commands
-
-TODO
+There is a list of commands in [COMMANDS.md](COMMANDS.md) at the root of the project, please note that this list may not be 100% up to date. Run `help` to get an up to date list.
