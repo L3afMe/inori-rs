@@ -8,6 +8,8 @@ use serenity::{
     framework::standard::{macros::command, Args, CommandResult},
     model::{
         channel::{ChannelType, Message},
+        guild::Role,
+        id::RoleId,
         prelude::OnlineStatus,
     },
     prelude::Context,
@@ -17,7 +19,10 @@ use urlencoding::encode;
 use crate::{
     models::commands::{CommandCounter, FrankFurterResponse, ShardManagerContainer},
     save_settings,
-    utils::emotes::EMOTES,
+    utils::{
+        chat::{get_user, is_user},
+        emotes::EMOTES,
+    },
     InoriChannelUtils, InoriMessageUtils, MessageCreator, Settings,
 };
 
@@ -61,9 +66,224 @@ async fn setup(ctx: &Context, msg: &Message) -> CommandResult {
 }
 
 #[command]
-#[description("Gives information about a guild")]
+#[aliases("ui")]
+#[description("List information about a user")]
+#[min_args(1)]
+async fn userinfo(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    let mut new_msg = msg
+        .channel_id
+        .send_loading(ctx, "User Info", "Loading information about the user")
+        .await
+        .unwrap();
+
+    let arg = args.rest().to_lowercase();
+
+    if !is_user(&arg) {
+        return msg
+            .channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error().title("User Info").content("Could not parse user ID")
+            })
+            .await;
+    }
+
+    let user = if let Ok(user) = get_user(&arg).parse::<u64>() {
+        user
+    } else {
+        return msg
+            .channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error().title("User Info").content("Could not parse user ID")
+            })
+            .await;
+    };
+
+    let user = if let Ok(user) = ctx.http.get_user(user).await {
+        user
+    } else {
+        return msg
+            .channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error().title("User Info").content("Couldn't get user")
+            })
+            .await;
+    };
+
+    let member = if !msg.is_private() {
+        if let Ok(member) = ctx.http.get_member(msg.guild_id.unwrap().0, user.id.0).await {
+            Some(member)
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    let colour = if let Some(member) = member.clone() {
+        member.colour(&ctx.cache).await
+    } else {
+        None
+    };
+
+    let perms = if let Some(member) = member.clone() {
+        if let Ok(perms) = member.permissions(&ctx.cache).await {
+            Some(perms)
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    new_msg
+        .update_noret(ctx, |m: &mut MessageCreator| {
+            let bot_tag = if user.bot { " (BOT)" } else { "" };
+            m.title("User Info")
+                .field("Name", format!("{}{}", user.tag(), bot_tag), false)
+                .thumbnail(user.face());
+
+            if let Some(member) = member {
+                let roles = member
+                    .roles
+                    .into_iter()
+                    .map(|r| format!("<@&{}>", r.0))
+                    .collect::<Vec<String>>();
+
+                m.field("Roles", roles.join(", "), false);
+
+
+                if let Some(perms) = perms {
+                    m.field(
+                        "Permissions",
+                        format!("Bits: {}\n{}", perms.bits, perms.get_permission_names().join(", ")),
+                        false,
+                    );
+                }
+
+                if let Some(colour) = colour {
+                    let color_hex = colour.hex();
+                    let colour_rgb = format!("{}, {}, {}", colour.r(), colour.g(), colour.b());
+                    m.field(
+                        "Color",
+                        format!("Raw: {}\nHex: {}\nRGB: {}", colour.0, color_hex, colour_rgb),
+                        true,
+                    )
+                    .colour(colour);
+                }
+            }
+            m.field("ID", user.id, true)
+        })
+        .await
+}
+
+#[command]
+#[aliases("ri")]
+#[description("List information about a role")]
 #[only_in("guilds")]
-#[aliases("server", "guild", "guildinfo")]
+#[min_args(1)]
+async fn roleinfo(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    let role_name_inp = args.rest().to_lowercase();
+    let mut new_msg = msg
+        .channel_id
+        .send_loading(ctx, "Role Info", "Loading information about the role")
+        .await
+        .unwrap();
+
+    let cached_guild = msg.guild_id.unwrap().to_guild_cached(&ctx.cache).await.unwrap();
+    let roles = cached_guild
+        .clone()
+        .roles
+        .into_iter()
+        .filter(|(_, role)| role.name.to_lowercase().contains(&role_name_inp))
+        .collect::<HashMap<RoleId, Role>>();
+    let roles_eq = roles
+        .clone()
+        .into_iter()
+        .filter(|(_, role)| role.name.to_lowercase().eq(&role_name_inp))
+        .collect::<HashMap<RoleId, Role>>();
+
+    let role = match roles.len() {
+        0 => {
+            return new_msg
+                .update_tmp(ctx, |m: &mut MessageCreator| {
+                    m.error()
+                        .title("Role Info")
+                        .content("Unable to find any roles that match the specified text")
+                })
+                .await;
+        },
+        1 => {
+            let keys = roles.keys().collect::<Vec<&RoleId>>();
+            let key = keys.get(0).unwrap();
+
+            roles.get(key).unwrap()
+        },
+        _ => {
+            if roles_eq.len() == 1 {
+                let keys = roles_eq.keys().collect::<Vec<&RoleId>>();
+                let key = keys.get(0).unwrap();
+
+                roles_eq.get(key).unwrap()
+            } else {
+                let role_list = roles_eq
+                    .into_iter()
+                    .map(|r| format!("<@&{}> - {}", r.0, r.0))
+                    .collect::<Vec<String>>();
+
+                return new_msg
+                    .update_tmp(ctx, |m: &mut MessageCreator| {
+                        m.error().title("Role Info").content(format!(
+                            "Too many roles found, try narrow your search request or use a RoleId.\nRole Ids:\n{}",
+                            role_list.join("\n")
+                        ))
+                    })
+                    .await;
+            }
+        },
+    };
+
+    let name = role.name.clone();
+    let id = role.id;
+    let colour = role.colour;
+    let color_hex = colour.hex();
+    let colour_rgb = format!("{}, {}, {}", colour.r(), colour.g(), colour.b());
+    let hoisted = role.hoist;
+    let mentionable = role.mentionable;
+    let position = role.position;
+    let permissions = role.permissions;
+
+    new_msg
+        .update_noret(ctx, |m: &mut MessageCreator| {
+            m.colour(colour)
+                .title("Role Info")
+                .field("Name", name, false)
+                .field(
+                    "Color",
+                    format!("Raw: {}\nHex: {}\nRGB: {}", colour.0, color_hex, colour_rgb),
+                    true,
+                )
+                .field("Hoisted", if hoisted { "True" } else { "False" }, true)
+                .field("Mentionable", if mentionable { "True" } else { "False" }, true)
+                .field("Position", position, true)
+                .field("ID", id, true);
+
+            if !permissions.is_empty() {
+                m.field(
+                    "Permissions",
+                    format!("Bits: {}\n{}", permissions.bits, permissions.get_permission_names().join(", ")),
+                    false,
+                );
+            }
+
+            m
+        })
+        .await
+}
+
+#[command]
+#[aliases("server", "guild", "guildinfo", "si")]
+#[description("List information about a guild")]
+#[only_in("guilds")]
 async fn serverinfo(ctx: &Context, msg: &Message) -> CommandResult {
     let mut new_msg = msg
         .channel_id

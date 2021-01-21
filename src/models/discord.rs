@@ -92,6 +92,7 @@ pub struct MessageCreator<'a> {
     fields:       Vec<MessageField>,
     footer_text:  Option<String>,
     footer_image: Option<String>,
+    colour:       Option<Colour>,
 }
 
 impl<'a> Default for MessageCreator<'a> {
@@ -106,6 +107,7 @@ impl<'a> Default for MessageCreator<'a> {
             fields:       Vec::new(),
             footer_text:  None,
             footer_image: None,
+            colour:       None,
         }
     }
 }
@@ -174,14 +176,18 @@ impl<'a> MessageCreator<'a> {
         let mut message = CreateMessage::default();
 
         message.embed(|e: &mut CreateEmbed| {
-            e.colour(match self.mode {
-                0 => Colour::FABLED_PINK,
-                1 => Colour::BLURPLE,
-                2 => Colour::FOOYOO,
-                3 => Colour::KERBAL,
-                4 => Colour::ORANGE,
-                _ => Colour::MEIBE_PINK,
-            });
+            if let Some(colour) = self.colour {
+                e.colour(colour);
+            } else {
+                e.colour(match self.mode {
+                    0 => Colour::FABLED_PINK,
+                    1 => Colour::BLURPLE,
+                    2 => Colour::FOOYOO,
+                    3 => Colour::KERBAL,
+                    4 => Colour::ORANGE,
+                    _ => Colour::MEIBE_PINK,
+                });
+            }
 
             if let Some(title) = &self.title {
                 e.title(format!("[{}]", title));
@@ -337,6 +343,12 @@ impl<'a> MessageCreator<'a> {
 
         self
     }
+
+    pub fn colour(&mut self, colour: Colour) -> &mut Self {
+        self.colour = Some(colour);
+
+        self
+    }
 }
 
 #[async_trait]
@@ -418,7 +430,8 @@ impl InoriChannelUtils for ChannelId {
         let msg = f(&mut msg_creator);
         let perms = get_perms(ctx, self).await;
         let emotes = {
-            if let Ok(user) = ctx.http.get_current_user().await {
+            // TODO: Check if has nitro
+            if let Ok(_user) = ctx.http.get_current_user().await {
                 let data = ctx.data.read().await;
                 let settings = data.get::<Settings>().expect("Expected Settings in TypeMap.").lock().await;
 

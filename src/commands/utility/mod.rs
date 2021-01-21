@@ -19,11 +19,13 @@ use tags::*;
     math,
     ping,
     purge,
+    roleinfo,
     rustdoc,
     serverinfo,
     setup,
     tags,
-    usages
+    usages,
+    userinfo
 )]
 #[description("**Utilities**")]
 struct Utility;
