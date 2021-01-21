@@ -105,8 +105,7 @@ async fn delay(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     };
 
     let data = ctx.data.write().await;
-    let mut settings: tokio::sync::MutexGuard<'_, Settings> =
-        data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
+    let mut settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
 
     let content = if arg.to_lowercase().eq("current") {
         format!("Delay currently set to {} seconds", settings.autodelete.delay)

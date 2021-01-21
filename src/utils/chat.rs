@@ -1,9 +1,23 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
+use serenity::prelude::Context;
 
-use crate::models::discord::Emote;
+use crate::{models::discord::Emote, Settings};
+
+pub async fn get_sb_emote(ctx: &Context, emote_name: &str, animated: bool) -> Option<Emote> {
+    let data = ctx.data.read().await;
+    let settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
+
+    if let Some(emote) = settings.sb_emotes.get(emote_name) {
+        let em = Emote::new(*emote, emote_name.to_string(), animated);
+        return Some(em);
+    }
+
+    None
+}
 
 static MENTION_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"<@!?\d{18}>").unwrap());
+static USER_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(<@)?\d{18}>?").unwrap());
 static CHANNEL_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(<#)?\d{18}>?").unwrap());
 static EMOTE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"<a?:[a-zA-Z0-9_]*?:\d{18}>").unwrap());
 static EMOTE_NAME_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"[^:]{0,}[a-zA-Z0-9][^:]").unwrap());
@@ -13,14 +27,27 @@ pub fn is_mention(arg: &str) -> bool {
     MENTION_REGEX.is_match(&arg)
 }
 
+pub fn is_user(arg: &str) -> bool {
+    USER_REGEX.is_match(arg)
+}
+
+pub fn get_user(arg: &str) -> String {
+    let mut arg = arg.strip_prefix('<').unwrap_or(arg);
+    arg = arg.strip_prefix('@').unwrap_or(arg);
+    arg = arg.strip_prefix('!').unwrap_or(arg);
+    arg = arg.strip_suffix('>').unwrap_or(arg);
+
+    arg.to_string()
+}
+
 pub fn is_channel(arg: &str) -> bool {
     CHANNEL_REGEX.is_match(arg)
 }
 
 pub fn get_channel(arg: &str) -> String {
-    let mut arg = arg.strip_prefix('<').unwrap_or_else(|| arg);
-    arg = arg.strip_prefix('#').unwrap_or_else(|| arg);
-    arg = arg.strip_suffix('>').unwrap_or_else(|| arg);
+    let mut arg = arg.strip_prefix('<').unwrap_or(arg);
+    arg = arg.strip_prefix('#').unwrap_or(arg);
+    arg = arg.strip_suffix('>').unwrap_or(arg);
 
     arg.to_string()
 }

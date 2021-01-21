@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use async_trait::async_trait;
 use serde_derive::Deserialize;
 use serenity::{
@@ -43,6 +45,25 @@ impl Clone for Emote {
     }
 }
 
+impl Emote {
+    pub fn new(id: u64, name: String, animated: bool) -> Emote {
+        let ext = if animated { "gif" } else { "png" };
+
+        Emote {
+            id,
+            name,
+            url: format!("https://cdn.discordapp.com/emojis/{}.{}", id, ext),
+            animated,
+        }
+    }
+
+    fn to_message(&self) -> String {
+        let a = if self.animated { "a" } else { "" };
+
+        format!("<{}:{}:{}>", a, self.name, self.id)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct MessageField {
     title:   String,
@@ -63,7 +84,7 @@ impl MessageField {
 #[derive(Debug, Clone)]
 pub struct MessageCreator<'a> {
     title:        Option<String>,
-    success:      bool,
+    mode:         u64,
     content:      Option<String>,
     image:        Option<String>,
     attachment:   Option<AttachmentType<'a>>,
@@ -77,7 +98,7 @@ impl<'a> Default for MessageCreator<'a> {
     fn default() -> MessageCreator<'a> {
         MessageCreator {
             title:        None,
-            success:      true,
+            mode:         0,
             content:      None,
             image:        None,
             attachment:   None,
@@ -90,7 +111,7 @@ impl<'a> Default for MessageCreator<'a> {
 }
 
 impl<'a> MessageCreator<'a> {
-    pub fn to_message(&self) -> CreateMessage {
+    pub fn to_message(&self, emotes: HashMap<String, u64>) -> CreateMessage {
         let mut message = CreateMessage::default();
         let mut ctnt = String::new();
 
@@ -99,10 +120,35 @@ impl<'a> MessageCreator<'a> {
         }
 
         if let Some(content) = &self.content {
-            let content = if self.success {
+            let content = if self.mode == 0 {
                 content.to_string()
             } else {
-                format!("Error: {}", content)
+                let emote_name = match self.mode {
+                    1 => "loading",
+                    2 => "response_success",
+                    3 => "response_info",
+                    4 => "response_warning",
+                    _ => "response_error",
+                };
+
+                let emote = if let Some(emote) = emotes.get(emote_name) {
+                    if self.mode == 1 {
+                        format!("<a:{}:{}> ", emote_name, emote)
+                    } else {
+                        format!("<:{}:{}> ", emote_name, emote)
+                    }
+                } else {
+                    match self.mode {
+                        1 => "Loading: ",
+                        2 => "Success: ",
+                        3 => "Info: ",
+                        4 => "Warning: ",
+                        _ => "Error: ",
+                    }
+                    .to_string()
+                };
+
+                format!("{} {}", emote, content)
             };
 
             ctnt = format!("{}\n{}", ctnt, content);
@@ -124,14 +170,17 @@ impl<'a> MessageCreator<'a> {
         message.content(ctnt).clone()
     }
 
-    pub fn to_embed(&self) -> CreateMessage {
+    pub fn to_embed(&self, emotes: HashMap<String, u64>) -> CreateMessage {
         let mut message = CreateMessage::default();
 
         message.embed(|e: &mut CreateEmbed| {
-            e.colour(if self.success {
-                Colour::BLURPLE
-            } else {
-                Colour::MEIBE_PINK
+            e.colour(match self.mode {
+                0 => Colour::FABLED_PINK,
+                1 => Colour::BLURPLE,
+                2 => Colour::FOOYOO,
+                3 => Colour::KERBAL,
+                4 => Colour::ORANGE,
+                _ => Colour::MEIBE_PINK,
             });
 
             if let Some(title) = &self.title {
@@ -139,13 +188,36 @@ impl<'a> MessageCreator<'a> {
             }
 
             if let Some(content) = &self.content {
-                let content = if self.success {
-                    content.to_string()
+                let emote = if self.mode == 0 {
+                    String::default()
                 } else {
-                    format!("Error: {}", content)
+                    let emote_name = match self.mode {
+                        1 => "loading",
+                        2 => "response_success",
+                        3 => "response_info",
+                        4 => "response_warning",
+                        _ => "response_error",
+                    };
+
+                    if let Some(emote) = emotes.get(emote_name) {
+                        if self.mode == 1 {
+                            format!("<a:{}:{}> ", emote_name, emote)
+                        } else {
+                            format!("<:{}:{}> ", emote_name, emote)
+                        }
+                    } else {
+                        match self.mode {
+                            1 => "Loading: ",
+                            2 => "Success: ",
+                            3 => "Info: ",
+                            4 => "Warning: ",
+                            _ => "Error: ",
+                        }
+                        .to_string()
+                    }
                 };
 
-                e.description(&content);
+                e.description(format!("{} {}", emote, content));
             }
 
             if let Some(image) = &self.image {
@@ -178,11 +250,11 @@ impl<'a> MessageCreator<'a> {
         message
     }
 
-    pub fn to_auto(&self, perms: Permissions) -> CreateMessage {
+    pub fn to_auto(&self, perms: Permissions, emotes: HashMap<String, u64>) -> CreateMessage {
         if perms.embed_links() {
-            self.to_embed()
+            self.to_embed(emotes)
         } else {
-            self.to_message()
+            self.to_message(emotes)
         }
     }
 
@@ -198,8 +270,32 @@ impl<'a> MessageCreator<'a> {
         self
     }
 
+    pub fn loading(&mut self) -> &mut Self {
+        self.mode = 1;
+
+        self
+    }
+
+    pub fn success(&mut self) -> &mut Self {
+        self.mode = 2;
+
+        self
+    }
+
+    pub fn info(&mut self) -> &mut Self {
+        self.mode = 3;
+
+        self
+    }
+
+    pub fn warning(&mut self) -> &mut Self {
+        self.mode = 4;
+
+        self
+    }
+
     pub fn error(&mut self) -> &mut Self {
-        self.success = false;
+        self.mode = 5;
 
         self
     }
@@ -321,10 +417,20 @@ impl InoriChannelUtils for ChannelId {
         let mut msg_creator = MessageCreator::default();
         let msg = f(&mut msg_creator);
         let perms = get_perms(ctx, self).await;
+        let emotes = {
+            if let Ok(user) = ctx.http.get_current_user().await {
+                let data = ctx.data.read().await;
+                let settings = data.get::<Settings>().expect("Expected Settings in TypeMap.").lock().await;
+
+                settings.sb_emotes.clone()
+            } else {
+                HashMap::new()
+            }
+        };
 
         let res = self
             .send_message(&ctx, |m| {
-                m.0 = msg.to_auto(perms).0;
+                m.0 = msg.to_auto(perms, emotes).0;
 
                 m
             })
@@ -343,8 +449,7 @@ impl InoriChannelUtils for ChannelId {
         loading_msg: &str,
     ) -> Result<Message, CommandError> {
         self.send(ctx, |f: &mut MessageCreator| {
-            f.title(title)
-                .content(&format!("<a:discordloading:395769211517009930> {}...", loading_msg))
+            f.loading().title(title).content(&format!("{}...", loading_msg))
         })
         .await
     }
@@ -379,13 +484,19 @@ impl InoriChannelUtils for ChannelId {
     ) -> Result<Option<Message>, CommandError> {
         let perms = get_perms(ctx, &msg.channel_id).await;
         let mut formatted_embeds = Vec::new();
+        let emotes = {
+            let data = ctx.data.read().await;
+            let settings = data.get::<Settings>().expect("Expected Settings in TypeMap").lock().await;
+
+            settings.sb_emotes.clone()
+        };
 
         for (idx, embed) in embeds.iter().enumerate() {
             let mut msg = CreateMessage::default();
             let mut embed = embed.clone();
             embed.footer_text(format!("Page {} of {}", idx + 1, embeds.len()));
 
-            msg.0 = embed.to_auto(perms).0;
+            msg.0 = embed.to_auto(perms, emotes.clone()).0;
             formatted_embeds.push(msg);
         }
 
@@ -480,10 +591,15 @@ impl InoriMessageUtils for Message {
         let mut msg_creator = MessageCreator::default();
         let msg = f(&mut msg_creator);
         let perms = get_perms(ctx, &self.channel_id).await;
+        let emotes = {
+            let data = ctx.data.read().await;
+            let settings = data.get::<Settings>().expect("Expected Settings in TypeMap.").lock().await;
+            settings.sb_emotes.clone()
+        };
 
         let res = self
             .edit(&ctx.http, |m| {
-                m.0 = msg.to_auto(perms).0;
+                m.0 = msg.to_auto(perms, emotes).0;
 
                 m
             })

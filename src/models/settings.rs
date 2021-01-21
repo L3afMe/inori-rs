@@ -46,6 +46,7 @@ pub struct Settings {
     pub autodelete: AutoDeleteConfig,
     pub slotbot: SlotBotConfig,
     pub tags: HashMap<String, String>,
+    pub sb_emotes: HashMap<String, u64>,
 }
 
 impl TypeMapKey for Settings {

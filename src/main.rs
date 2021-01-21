@@ -497,6 +497,7 @@ async fn main() {
     }
 }
 
+#[allow(dead_code)]
 fn titlize<D: ToString>(inp: D) -> String {
     let inp = inp.to_string();
 
@@ -506,6 +507,7 @@ fn titlize<D: ToString>(inp: D) -> String {
     format!("{}{}", first.to_uppercase(), rest.to_lowercase())
 }
 
+#[allow(dead_code)]
 fn format_command(parent_command: &str, command: &Command) -> String {
     let mut output = String::new();
 
@@ -571,6 +573,7 @@ fn format_command(parent_command: &str, command: &Command) -> String {
     output
 }
 
+#[allow(dead_code)]
 fn commands_to_md(groups: &[&'static CommandGroup]) {
     let groups = groups.to_vec();
     let mut output = String::new();

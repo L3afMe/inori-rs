@@ -390,6 +390,7 @@ pub async fn setup_settings() -> Settings {
         autodelete,
         slotbot,
         tags: HashMap::new(),
+        sb_emotes: HashMap::new(),
     };
 
     if let Err(why) = _save_settings(&settings) {

@@ -1,6 +1,6 @@
 extern crate meval;
 extern crate urlencoding;
-use std::{cmp::min, time::Instant};
+use std::{cmp::min, collections::HashMap, time::Instant};
 
 use serenity::{
     client::bridge::gateway::ShardId,
@@ -44,14 +44,17 @@ async fn setup(ctx: &Context, msg: &Message) -> CommandResult {
         },
     };
 
+    let mut ids = HashMap::new();
     for key in EMOTES.keys() {
-        guild.create_emoji(&ctx.http, key, EMOTES.get(key).unwrap()).await?;
+        let emote = guild.create_emoji(&ctx.http, key, EMOTES.get(key).unwrap()).await?;
+        ids.insert(emote.name, emote.id.0);
     }
 
     let data = ctx.data.write().await;
     let mut settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
 
     settings.emoteserver = guild.id.0;
+    settings.sb_emotes = ids;
     save_settings(&settings);
 
     Ok(())
