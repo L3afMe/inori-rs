@@ -31,6 +31,7 @@ where
         let mut buffer = String::new();
         reader.read_line(&mut buffer).await.unwrap();
         let input = &buffer[..buffer.len() - 1];
+        let input = input.trim();
 
         if let Some(res) = f(input.to_string()).await {
             return Some(res);
