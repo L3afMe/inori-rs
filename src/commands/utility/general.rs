@@ -736,9 +736,6 @@ async fn checktoken(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 };
 
                 let mut extras = Vec::new();
-                if user.is_discord_employee() {
-                    extras.push("Discord Employee");
-                }
 
                 if user.is_early_verified_bot_dev() {
                     extras.push("Early Verified Bot Dev");
@@ -749,12 +746,14 @@ async fn checktoken(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 }
 
                 let mut content = format!(
-                    "Valid token\nTag: {}#{} {}\nEmail: {}\nPhone: {}\nNitro: {}",
+                    "Tag: {}#{} {}\nID: {}\nEmail: {}\nPhone: {}\n2FA: {}\nNitro: {}",
                     user.username,
                     user.discriminator,
                     bot_tag,
+                    user.id,
                     user.email,
                     user.phone.clone().unwrap_or_else(|| "Not set".to_string()),
+                    if user.mfa_enabled { "Enabled" } else { "Disabled" },
                     user.nitro_str(),
                 );
 

@@ -24,7 +24,7 @@ pub struct BasicUser {
     pub email:         String,
     pub phone:         Option<String>,
     pub verified:      bool,
-    pub mfa:           bool,
+    pub mfa_enabled:   bool,
     pub premium_type:  Option<u8>,
     pub flags:         u64,
     pub avatar:        Option<String>,
@@ -61,10 +61,6 @@ impl BasicUser {
             "None"
         }
         .to_string()
-    }
-
-    pub fn is_discord_employee(&self) -> bool {
-        check_flag(self.flags, 0b00000000000000000)
     }
 
     pub fn is_partner_server_owner(&self) -> bool {
