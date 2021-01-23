@@ -72,6 +72,8 @@ pub async fn normal_message(ctx: &Context, msg: &Message) {
                     code
                 ))
                 .header("Authorization", &ctx.http.token)
+                .header("Content-Length", 0)
+                .body(String::new())
                 .send()
                 .await;
 
