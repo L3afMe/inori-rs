@@ -429,12 +429,14 @@ impl InoriChannelUtils for ChannelId {
         let mut msg_creator = MessageCreator::default();
         let msg = f(&mut msg_creator);
         let perms = get_perms(ctx, self).await;
+        let embed_mode;
         let emotes = {
+            let data = ctx.data.read().await;
+            let settings = data.get::<Settings>().expect("Expected Settings in TypeMap.").lock().await;
+            embed_mode = settings.embed_mode;
+
             // TODO: Check if has nitro
             if let Ok(_user) = ctx.http.get_current_user().await {
-                let data = ctx.data.read().await;
-                let settings = data.get::<Settings>().expect("Expected Settings in TypeMap.").lock().await;
-
                 settings.sb_emotes.clone()
             } else {
                 HashMap::new()
@@ -443,7 +445,11 @@ impl InoriChannelUtils for ChannelId {
 
         let res = self
             .send_message(&ctx, |m| {
-                m.0 = msg.to_auto(perms, emotes).0;
+                m.0 = match embed_mode {
+                    0 => msg.to_message(emotes).0,
+                    1 => msg.to_auto(perms, emotes).0,
+                    _ => msg.to_embed(emotes).0,
+                };
 
                 m
             })
@@ -497,10 +503,13 @@ impl InoriChannelUtils for ChannelId {
     ) -> Result<Option<Message>, CommandError> {
         let perms = get_perms(ctx, &msg.channel_id).await;
         let mut formatted_embeds = Vec::new();
+
+        let embed_mode;
         let emotes = {
             let data = ctx.data.read().await;
             let settings = data.get::<Settings>().expect("Expected Settings in TypeMap").lock().await;
 
+            embed_mode = settings.embed_mode;
             settings.sb_emotes.clone()
         };
 
@@ -509,7 +518,12 @@ impl InoriChannelUtils for ChannelId {
             let mut embed = embed.clone();
             embed.footer_text(format!("Page {} of {}", idx + 1, embeds.len()));
 
-            msg.0 = embed.to_auto(perms, emotes.clone()).0;
+            msg.0 = match embed_mode {
+                0 => embed.to_message(emotes.clone()).0,
+                1 => embed.to_auto(perms, emotes.clone()).0,
+                _ => embed.to_embed(emotes.clone()).0,
+            };
+
             formatted_embeds.push(msg);
         }
 
@@ -604,15 +618,23 @@ impl InoriMessageUtils for Message {
         let mut msg_creator = MessageCreator::default();
         let msg = f(&mut msg_creator);
         let perms = get_perms(ctx, &self.channel_id).await;
+
+        let embed_mode;
         let emotes = {
             let data = ctx.data.read().await;
             let settings = data.get::<Settings>().expect("Expected Settings in TypeMap.").lock().await;
+
+            embed_mode = settings.embed_mode;
             settings.sb_emotes.clone()
         };
 
         let res = self
             .edit(&ctx.http, |m| {
-                m.0 = msg.to_auto(perms, emotes).0;
+                m.0 = match embed_mode {
+                    0 => msg.to_message(emotes).0,
+                    1 => msg.to_auto(perms, emotes).0,
+                    _ => msg.to_embed(emotes).0,
+                };
 
                 m
             })

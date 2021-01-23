@@ -81,6 +81,58 @@ async fn nsfwfilter(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
 }
 
 #[command]
+#[description(
+    "Edit embed config\n**Modes**\n0 - Never\n1 - Detect embed perms (Doesn't work for some people)\n2 - Always"
+)]
+#[usage("<mode>")]
+#[example("2")]
+async fn embedmode(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let content = if args.is_empty() {
+        let data = ctx.data.read().await;
+        let settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
+
+        let mode = match settings.embed_mode {
+            0 => "Never",
+            1 => "Detect",
+            _ => "Always",
+        };
+
+        format!("Embed mode is currently set to {}", mode)
+    } else if let Ok(val) = args.single::<u8>() {
+        if val <= 2 {
+            let data = ctx.data.write().await;
+            let mut settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
+
+            settings.embed_mode = val;
+            save_settings(&settings);
+
+            let mode = match val {
+                0 => "Never",
+                1 => "Detect",
+                _ => "Always",
+            };
+
+            format!("Embed mode set to `{}`", mode)
+        } else {
+            return msg
+                .channel_id
+                .send_tmp(ctx, |m: &mut MessageCreator| {
+                    m.error()
+                        .title("Embed Mode")
+                        .content("Invalid mode specified.\n**Valid Modes**\n`0` - Never\n`1` - Detect\n`2` - Always")
+                })
+                .await;
+        }
+    } else {
+        "Unable to parse mode".to_string()
+    };
+
+    msg.channel_id
+        .send_tmp(ctx, |m: &mut MessageCreator| m.title("Embed Mode").content(content))
+        .await
+}
+
+#[command]
 #[description("Edit giveaway joiner configuration")]
 #[usage("<subcommand>")]
 #[example("delay 120")]

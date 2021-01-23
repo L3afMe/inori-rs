@@ -6,6 +6,6 @@ use general::*;
 use serenity::framework::standard::macros::group;
 
 #[group]
-#[commands(autodelete, giveaway, nsfwfilter, prefix)]
+#[commands(autodelete, embedmode, giveaway, nsfwfilter, prefix)]
 #[description("**Config**")]
 struct Config;

@@ -38,7 +38,7 @@ pub struct Settings {
     pub command_prefix: String,
     pub global_nsfw_level: u8,
     pub is_male: bool,
-    pub send_embeds: bool,
+    pub embed_mode: u8,
     pub emoteserver: u64,
     pub nitrosniper: bool,
     pub pfp_switcher: PfpSwitcher,

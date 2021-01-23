@@ -150,12 +150,12 @@ pub async fn setup_settings() -> Settings {
     .await
     .unwrap_or(false);
 
-    let send_embeds: bool = get_valid_input(
-        "if you would like to use rich embeds.\n1 - Enabled\n2 - Disabled",
+    let embed_mode: u8 = get_valid_input(
+        "if you would like to use rich embeds.\n0 - Never\n1 - Detect perms (Doesn't work for some people)\n2 - Always",
         async move |input: String| match input.parse::<u8>() {
             Ok(op) => {
-                if (1..=2).contains(&op) {
-                    Some(op == 1)
+                if (1..=3).contains(&op) {
+                    Some(op)
                 } else {
                     None
                 }
@@ -164,7 +164,7 @@ pub async fn setup_settings() -> Settings {
         },
     )
     .await
-    .unwrap_or(false);
+    .unwrap_or(1);
 
     let slotbot_enabled: bool = get_valid_input(
         "if you would like to snipe SlotBot wallet drops.\n1 - Enabled\n2 - Disabled",
@@ -362,6 +362,7 @@ pub async fn setup_settings() -> Settings {
         enabled: giveaway_enabled,
         delay:   giveaway_delay,
     };
+
     let slotbot: SlotBotConfig = SlotBotConfig {
         enabled: slotbot_enabled,
         dynamic_prefix: slotbot_dynamic_prefix,
@@ -383,7 +384,7 @@ pub async fn setup_settings() -> Settings {
         command_prefix,
         global_nsfw_level,
         is_male,
-        send_embeds,
+        embed_mode,
         emoteserver: 0,
         nitrosniper,
         pfp_switcher,
