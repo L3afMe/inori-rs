@@ -44,6 +44,7 @@ use crate::{
         settings::Settings,
     },
     settings::{load_settings, save_settings, setup_settings},
+    utils::consts::{AUTHOR_DISC, PROG_NAME},
 };
 
 struct Handler;
@@ -438,7 +439,7 @@ async fn spawn_pfp_change_thread(ctx: Arc<Mutex<Context>>) {
 #[tokio::main]
 async fn main() {
     let settings = if Path::exists(Path::new(&"config.toml")) {
-        match load_settings() {
+        match load_settings().await {
             Ok(settings) => settings,
             Err(why) => {
                 println!("[Config] Error while loading config: {}", why);
@@ -447,7 +448,22 @@ async fn main() {
             },
         }
     } else {
-        setup_settings().await
+        println!(
+            "Welcome to {}!\n\nI was unable to find a config file\nso I'll walk you through making a new one.\n\nIf \
+             you have any issues during setup or\nwhile using the bot, feel free to contact\n{} on Discord for \
+             support!\n\nIf you wish to stop the bot at any time,\npress Control+C and the bot will force stop.
+        \nThis will only take a minute!",
+            PROG_NAME, AUTHOR_DISC
+        );
+
+        let settings = setup_settings(&toml::map::Map::new()).await;
+        println!(
+            "[Config] Config setup and ready to use\n[Bot] Make sure to run {}setup which will create an new server \
+             and add emotes that are used throughout the bot",
+            &settings.command_prefix
+        );
+
+        settings
     };
 
     let framework = StandardFramework::new()
