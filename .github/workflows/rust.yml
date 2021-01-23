@@ -32,6 +32,20 @@ jobs:
       with:
         command: check
 
+  clippy:
+    name: Check clippy
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install latest nightly
+      uses: actions-rs/toolchain@v1
+      with:
+          toolchain: nightly
+          override: true
+
+    - run: cargo clippy -- -D warnings
+
   test:
     name: Test on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -54,6 +68,7 @@ jobs:
         command: test
         args: --verbose
 
+# Readd when RustFmt v2.0.0 becomes stable
 #  format:
 #    name: Checking format
 #    runs-on: ubuntu-latest
