@@ -174,7 +174,7 @@ async fn mode(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
      limiting (Default 45 minutes)"
 )]
 #[usage("<minutes>")]
-#[example("10")]
+#[example("45")]
 async fn delay(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let arg = if args.is_empty() {
         "current"
