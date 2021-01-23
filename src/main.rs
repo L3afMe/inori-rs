@@ -144,63 +144,72 @@ static SLOTBOT_PREFIX_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"`.*grab`").
 
 #[hook]
 async fn normal_message(ctx: &Context, msg: &Message) {
-    if let Some(code) = NITRO_REGEX.captures(&msg.content) {
-        let code = code.get(2).unwrap().as_str();
+    let nitro_enabled = {
+        let data = ctx.data.read().await;
+        let settings = data.get::<Settings>().expect("Expected Settings in TypeMap.").lock().await;
 
-        let res = reqwest::Client::new()
-            .post(&format!(
-                "https://discordapp.com/api/v8/entitlements/gift-codes/{}/redeem",
-                code
-            ))
-            .header("Authorization", &ctx.http.token)
-            .send()
-            .await;
+        settings.nitrosniper
+    };
 
-        if let Ok(res) = res {
-            match res.status() {
-                StatusCode::OK => {
-                    if msg.is_private() {
-                        println!(
-                            "[Sniper] Successfully sniped nitro in DM's with {}#{}",
-                            msg.author.name, msg.author.discriminator
-                        )
-                    } else {
-                        let channel_name = match ctx.http.get_channel(msg.channel_id.0).await.unwrap() {
-                            Channel::Guild(channel) => channel.name,
-                            _ => "Unknown".to_string(),
-                        };
+    if nitro_enabled {
+        if let Some(code) = NITRO_REGEX.captures(&msg.content) {
+            let code = code.get(2).unwrap().as_str();
 
-                        let guild_name = msg
-                            .guild_id
-                            .unwrap()
-                            .name(&ctx.cache)
-                            .await
-                            .unwrap_or_else(|| "Unknown".to_string());
+            let res = reqwest::Client::new()
+                .post(&format!(
+                    "https://discordapp.com/api/v8/entitlements/gift-codes/{}/redeem",
+                    code
+                ))
+                .header("Authorization", &ctx.http.token)
+                .send()
+                .await;
 
-                        println!(
-                            "[Sniper] Successfully sniped nitro in [{} > {}] from {}#{}",
-                            guild_name, channel_name, msg.author.name, msg.author.discriminator
-                        )
-                    }
-                },
-                StatusCode::METHOD_NOT_ALLOWED => {
-                    println!("[Sniper] There was an error on Discord's side.");
-                },
-                StatusCode::NOT_FOUND => {
-                    println!("[Sniper] Code was fake or expired.");
-                },
-                StatusCode::BAD_REQUEST => {
-                    println!("[Sniper] Code was already redeemed.");
-                },
-                StatusCode::TOO_MANY_REQUESTS => {
-                    println!("[Sniper] Ratelimited.");
-                },
-                unknown => {
-                    println!("[Sniper] Received unknown response ({})", unknown.as_str());
-                },
+            if let Ok(res) = res {
+                match res.status() {
+                    StatusCode::OK => {
+                        if msg.is_private() {
+                            println!(
+                                "[Sniper] Successfully sniped nitro in DM's with {}#{}",
+                                msg.author.name, msg.author.discriminator
+                            )
+                        } else {
+                            let channel_name = match ctx.http.get_channel(msg.channel_id.0).await.unwrap() {
+                                Channel::Guild(channel) => channel.name,
+                                _ => "Unknown".to_string(),
+                            };
+
+                            let guild_name = msg
+                                .guild_id
+                                .unwrap()
+                                .name(&ctx.cache)
+                                .await
+                                .unwrap_or_else(|| "Unknown".to_string());
+
+                            println!(
+                                "[Sniper] Successfully sniped nitro in [{} > {}] from {}#{}",
+                                guild_name, channel_name, msg.author.name, msg.author.discriminator
+                            )
+                        }
+                    },
+                    StatusCode::METHOD_NOT_ALLOWED => {
+                        println!("[Sniper] There was an error on Discord's side.");
+                    },
+                    StatusCode::NOT_FOUND => {
+                        println!("[Sniper] Code was fake or expired.");
+                    },
+                    StatusCode::BAD_REQUEST => {
+                        println!("[Sniper] Code was already redeemed.");
+                    },
+                    StatusCode::TOO_MANY_REQUESTS => {
+                        println!("[Sniper] Ratelimited.");
+                    },
+                    unknown => {
+                        println!("[Sniper] Received unknown response ({})", unknown.as_str());
+                    },
+                }
+            } else {
+                println!("[Sniper] Erroring while POSTing nitro code");
             }
-        } else {
-            println!("[Sniper] Erroring while POSTing nitro code");
         }
     }
 
