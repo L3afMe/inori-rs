@@ -3,6 +3,7 @@ mod commands;
 mod models;
 mod settings;
 mod utils;
+
 use std::{
     collections::{HashMap, HashSet},
     fs::{DirEntry, File},
@@ -35,6 +36,7 @@ use tokio::{
     task,
     time::{delay_for, Duration},
 };
+use utils::version::check_is_latest;
 
 use crate::{
     commands::*,
@@ -447,6 +449,8 @@ async fn spawn_pfp_change_thread(ctx: Arc<Mutex<Context>>) {
 
 #[tokio::main]
 async fn main() {
+    check_is_latest().await;
+
     let settings = if Path::exists(Path::new(&"config.toml")) {
         match load_settings().await {
             Ok(settings) => settings,

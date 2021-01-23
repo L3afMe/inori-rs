@@ -38,7 +38,7 @@ async fn about(ctx: &Context, msg: &Message) -> CommandResult {
                     format!("{} ({})", consts::AUTHOR_NAME, consts::AUTHOR_DISC),
                     true,
                 )
-                .field("GitHub Repo", "https://github.com/L3afMe/inori-rs", true)
+                .field("GitHub Repo", consts::GITHUB_LINK, true)
                 .image(
                     "https://static.wikia.nocookie.net/guiltycrown/mages\
                     /a/a5/Guilty_Crown_-_01_-_Large_17.jpg",
