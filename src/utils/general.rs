@@ -12,7 +12,7 @@ pub async fn get_perms(ctx: &Context, channel: &ChannelId) -> Permissions {
                 return perms;
             }
         } else {
-            return Permissions::from_bits(0b00000_1000110_1011100110001_000000).unwrap_or_else(Permissions::empty);
+            return Permissions::from_bits(0b000_0010_0011_0101_1100_1100_0100_0000).unwrap_or_else(Permissions::empty);
         }
     }
 

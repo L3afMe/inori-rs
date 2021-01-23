@@ -103,19 +103,19 @@ pub struct MALAnimeSearchResult {
 fn parse_start_date<'de, D>(d: D) -> Result<String, D::Error>
 where
     D: Deserializer<'de>, {
-    Deserialize::deserialize(d).map(|x: Option<_>| x.unwrap_or("NYA".to_string()))
+    Deserialize::deserialize(d).map(|x: Option<_>| x.unwrap_or_else(|| "NYA".to_string()))
 }
 
 fn parse_end_date<'de, D>(d: D) -> Result<String, D::Error>
 where
     D: Deserializer<'de>, {
-    Deserialize::deserialize(d).map(|x: Option<_>| x.unwrap_or("TBD".to_string()))
+    Deserialize::deserialize(d).map(|x: Option<_>| x.unwrap_or_else(|| "TBD".to_string()))
 }
 
 fn parse_rated<'de, D>(d: D) -> Result<String, D::Error>
 where
     D: Deserializer<'de>, {
-    Deserialize::deserialize(d).map(|x: Option<_>| x.unwrap_or("Unrated".to_string()))
+    Deserialize::deserialize(d).map(|x: Option<_>| x.unwrap_or_else(|| "Unrated".to_string()))
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

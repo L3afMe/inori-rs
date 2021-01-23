@@ -123,31 +123,29 @@ impl MessageField {
 
 #[derive(Debug, Clone)]
 pub struct MessageCreator<'a> {
-    title:        Option<String>,
-    mode:         u64,
-    content:      Option<String>,
-    image:        Option<String>,
-    attachment:   Option<AttachmentType<'a>>,
-    thumbnail:    Option<String>,
-    fields:       Vec<MessageField>,
-    footer_text:  Option<String>,
-    footer_image: Option<String>,
-    colour:       Option<Colour>,
+    title:       Option<String>,
+    mode:        u64,
+    content:     Option<String>,
+    image:       Option<String>,
+    attachment:  Option<AttachmentType<'a>>,
+    thumbnail:   Option<String>,
+    fields:      Vec<MessageField>,
+    footer_text: Option<String>,
+    colour:      Option<Colour>,
 }
 
 impl<'a> Default for MessageCreator<'a> {
     fn default() -> MessageCreator<'a> {
         MessageCreator {
-            title:        None,
-            mode:         0,
-            content:      None,
-            image:        None,
-            attachment:   None,
-            thumbnail:    None,
-            fields:       Vec::new(),
-            footer_text:  None,
-            footer_image: None,
-            colour:       None,
+            title:       None,
+            mode:        0,
+            content:     None,
+            image:       None,
+            attachment:  None,
+            thumbnail:   None,
+            fields:      Vec::new(),
+            footer_text: None,
+            colour:      None,
         }
     }
 }
@@ -279,10 +277,6 @@ impl<'a> MessageCreator<'a> {
             }
 
             e.footer(|f| {
-                if let Some(image) = &self.footer_image {
-                    f.icon_url(image);
-                }
-
                 if let Some(text) = &self.footer_text {
                     f.text(text);
                 }
@@ -368,12 +362,6 @@ impl<'a> MessageCreator<'a> {
         let field = MessageField::new(&title.to_string(), &content.to_string(), inline);
 
         self.fields.push(field);
-
-        self
-    }
-
-    pub fn footer_image<D: ToString>(&mut self, url: D) -> &mut Self {
-        self.footer_image = Some(url.to_string());
 
         self
     }

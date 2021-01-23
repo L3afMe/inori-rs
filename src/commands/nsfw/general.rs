@@ -52,7 +52,7 @@ async fn rule34(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     } else {
         return new_msg
             .update_tmp(ctx, |m: &mut MessageCreator| {
-                m.error()
+                m.warning()
                     .title("Rule 34")
                     .content("Well you fucking did it, you found something that doesn't exist in porn")
             })
@@ -274,7 +274,7 @@ async fn imagebomb(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
                 return msg
                     .channel_id
                     .send_tmp(ctx, |m: &mut MessageCreator| {
-                        m.error().title("Image Bomb").content(format!(
+                        m.warning().title("Error").content(format!(
                             "This server is marked not marked as NSFW and you've specified a NSFW image.\nThis can be \
                              overriden by executing `nsfwfilter {}`",
                             selected.level
@@ -341,7 +341,7 @@ async fn image(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 return msg
                     .channel_id
                     .send_tmp(ctx, |m: &mut MessageCreator| {
-                        m.error().title("Image").content(format!(
+                        m.warning().title("Error").content(format!(
                             "This server is marked not marked as NSFW and you've specified a NSFW image.\nThis can be \
                              overriden by executing `nsfwfilter {}`",
                             selected.level

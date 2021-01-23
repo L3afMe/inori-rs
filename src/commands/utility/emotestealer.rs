@@ -36,7 +36,7 @@ async fn server(ctx: &Context, msg: &Message) -> CommandResult {
 
     msg.channel_id
         .send_tmp(ctx, |m: &mut MessageCreator| {
-            m.error().title("Emote Stealer").content("Updated emote server")
+            m.success().title("Emote Stealer").content("Updated emote server")
         })
         .await
 }
@@ -127,7 +127,7 @@ async fn emotestealer(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id.send_paginatorwo_noret(ctx, msg, msgs, options).await
 }
 
-async fn save<'a>(menu: &mut Menu<'a>, _reaction: Reaction) {
+async fn save(menu: &mut Menu<'_>, _reaction: Reaction) {
     let mut new_msg = menu
         .msg
         .channel_id
@@ -189,7 +189,8 @@ async fn save<'a>(menu: &mut Menu<'a>, _reaction: Reaction) {
 
         let _ = new_msg
             .update_tmp(&ctx, |m: &mut MessageCreator| {
-                m.title("Emote Creator")
+                m.success()
+                    .title("Emote Creator")
                     .title(format!("Added emote '{}'", emote_name))
                     .image(emote_url)
             })
