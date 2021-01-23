@@ -170,7 +170,7 @@ async fn mode(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 
 #[command]
 #[description(
-    "Get or set the delay between switching profile pictures in minutes.Minimum set to 30 minutes to avoid rate \
+    "Get or set the delay between switching profile pictures in minutes. Minimum set to 30 minutes to avoid rate \
      limiting (Default 45 minutes)"
 )]
 #[usage("<minutes>")]

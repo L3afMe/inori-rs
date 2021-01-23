@@ -413,7 +413,7 @@ pub fn load_settings() -> Result<Settings, String> {
         Ok(file) => file,
         Err(why) => {
             if let std::io::ErrorKind::NotFound = why.kind() {
-                return Err("Unable to find 'config.toml', copy 'config.toml.bak' and setup config".to_string());
+                return Err("Unable to find 'config.toml', please reopen to start the config setup".to_string());
             }
 
             return Err(format!("Unknown error occured while opening 'config.toml'\n[Config] {}", why));
