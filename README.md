@@ -17,6 +17,7 @@ Named after [Inori Yuzuriha](https://guiltycrown.fandom.com/wiki/Inori_Yuzuriha)
 
 1) Download the latest version from https://github.com/l3afme/inori-rs/releases/latest
 2) Run the file and go through the config setup walkthrough
+  - Linux requires `build-essential`
 
 ### Building from source
 
