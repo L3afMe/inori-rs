@@ -19,6 +19,65 @@ use crate::{utils::general::get_perms, Settings};
 pub struct BasicUser {
     pub username:      String,
     pub discriminator: String,
+    pub bot:           Option<bool>,
+    pub id:            String,
+    pub email:         String,
+    pub phone:         Option<String>,
+    pub verified:      bool,
+    pub mfa:           bool,
+    pub premium_type:  Option<u8>,
+    pub flags:         u64,
+    pub avatar:        Option<String>,
+}
+
+fn check_flag(flags: u64, flag: u64) -> bool {
+    if flags == 0 { false } else { (flags & flag) == flag }
+}
+
+impl BasicUser {
+    pub fn avatar_url(&self) -> String {
+        let ext = if let Some(hash) = &self.avatar {
+            format!("avatars/{}/{}.png", self.id, hash)
+        } else {
+            format!("embed/avatars/{}.png", self.discriminator)
+        };
+
+        format!("https://cdn.discordapp.com/{}", ext)
+    }
+
+    pub fn is_bot(&self) -> bool {
+        self.bot.is_some() && self.bot.unwrap()
+    }
+
+    pub fn nitro_str(&self) -> String {
+        if let Some(tier) = self.premium_type {
+            match tier {
+                0 => "None",
+                1 => "Nitro Classic",
+                2 => "Nitro Boost",
+                _ => "Unknown",
+            }
+        } else {
+            "None"
+        }
+        .to_string()
+    }
+
+    pub fn is_discord_employee(&self) -> bool {
+        check_flag(self.flags, 0b00000000000000000)
+    }
+
+    pub fn is_partner_server_owner(&self) -> bool {
+        check_flag(self.flags, 0b00000000000000001)
+    }
+
+    pub fn is_verified_bot(&self) -> bool {
+        check_flag(self.flags, 0b01000000000000000)
+    }
+
+    pub fn is_early_verified_bot_dev(&self) -> bool {
+        check_flag(self.flags, 0b10000000000000000)
+    }
 }
 
 pub struct Emote {
@@ -37,30 +96,11 @@ impl PartialEq for Emote {
 impl Clone for Emote {
     fn clone(&self) -> Emote {
         Emote {
-            name:     (&self.name).to_string(),
+            name:     self.name.clone(),
             id:       self.id,
-            url:      (&self.url).to_string(),
+            url:      self.url.clone(),
             animated: self.animated,
         }
-    }
-}
-
-impl Emote {
-    pub fn new(id: u64, name: String, animated: bool) -> Emote {
-        let ext = if animated { "gif" } else { "png" };
-
-        Emote {
-            id,
-            name,
-            url: format!("https://cdn.discordapp.com/emojis/{}.{}", id, ext),
-            animated,
-        }
-    }
-
-    fn to_message(&self) -> String {
-        let a = if self.animated { "a" } else { "" };
-
-        format!("<{}:{}:{}>", a, self.name, self.id)
     }
 }
 

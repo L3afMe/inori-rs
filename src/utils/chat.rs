@@ -1,20 +1,7 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
-use serenity::prelude::Context;
 
-use crate::{models::discord::Emote, Settings};
-
-pub async fn get_sb_emote(ctx: &Context, emote_name: &str, animated: bool) -> Option<Emote> {
-    let data = ctx.data.read().await;
-    let settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
-
-    if let Some(emote) = settings.sb_emotes.get(emote_name) {
-        let em = Emote::new(*emote, emote_name.to_string(), animated);
-        return Some(em);
-    }
-
-    None
-}
+use crate::models::discord::Emote;
 
 static MENTION_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"<@!?\d{18}>").unwrap());
 static USER_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(<@)?\d{18}>?").unwrap());

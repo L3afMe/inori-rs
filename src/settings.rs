@@ -475,7 +475,7 @@ pub async fn setup_settings(settings: &toml::map::Map<String, toml::Value>) -> S
     let sb_emotes = if settings.contains_key("sb_emotes") && settings.get("sb_emotes").unwrap().is_table() {
         let list = settings.get("sb_emotes").unwrap().as_table().unwrap().clone();
         list.into_iter()
-            .filter(|(key, val)| val.is_integer())
+            .filter(|(_key, val)| val.is_integer())
             .map(|(key, val)| (key, val.as_integer().unwrap() as u64))
             .collect::<HashMap<String, u64>>()
     } else {
@@ -485,7 +485,7 @@ pub async fn setup_settings(settings: &toml::map::Map<String, toml::Value>) -> S
     let tags = if settings.contains_key("tags") && settings.get("tags").unwrap().is_table() {
         let list = settings.get("tags").unwrap().as_table().unwrap().clone();
         list.into_iter()
-            .filter(|(key, val)| val.is_str())
+            .filter(|(_key, val)| val.is_str())
             .map(|(key, val)| (key, val.as_str().unwrap().to_string()))
             .collect::<HashMap<String, String>>()
     } else {
@@ -511,9 +511,6 @@ pub async fn setup_settings(settings: &toml::map::Map<String, toml::Value>) -> S
         delay:   autodelete_delay,
     };
 
-    // Clone prefix so we can use in the message below
-    // after it's been moved into the config
-    let prefix = command_prefix.clone();
     let settings: Settings = Settings {
         user_token,
         command_prefix,

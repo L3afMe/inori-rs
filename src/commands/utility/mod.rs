@@ -14,6 +14,7 @@ use tags::*;
 #[group]
 #[commands(
     base64,
+    checktoken,
     emotestealer,
     exchange,
     math,

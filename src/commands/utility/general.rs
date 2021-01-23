@@ -17,7 +17,10 @@ use serenity::{
 use urlencoding::encode;
 
 use crate::{
-    models::commands::{CommandCounter, FrankFurterResponse, ShardManagerContainer},
+    models::{
+        commands::{CommandCounter, FrankFurterResponse, ShardManagerContainer},
+        discord::BasicUser,
+    },
     save_settings,
     utils::{
         chat::{get_user, is_user},
@@ -695,5 +698,84 @@ async fn base64(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 
     msg.channel_id
         .send_tmp(ctx, |m: &mut MessageCreator| m.title("Base64").content(content))
+        .await
+}
+
+#[command]
+#[aliases("token")]
+#[description("Check the validitiy of a token")]
+#[usage("<token>")]
+#[example("ODAyMTc5MzM1OTg0NTEzMDY0.YArduw.30nmw_xqSuUX6hzRAC_li05Jw3Q")]
+#[num_args(1)]
+async fn checktoken(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    let mut new_msg = msg
+        .channel_id
+        .send_loading(ctx, "Token Checker", "Checking Token")
+        .await
+        .unwrap();
+
+    let tkn = args.rest();
+
+    let res = reqwest::Client::new()
+        .get("https://discord.com/api/v8/users/@me")
+        .header("Authorization", tkn)
+        .send()
+        .await;
+
+    let content = match res {
+        Ok(res) => match res.status().as_u16() {
+            401 => "Invalid token".to_string(),
+            200 => {
+                let user = serde_json::from_str::<BasicUser>(&res.text().await.unwrap()).unwrap();
+
+                let bot_tag = if user.is_bot() {
+                    let end = if user.is_verified_bot() { " - Verified" } else { "" };
+                    format!("(Bot{})", end)
+                } else {
+                    "".to_string()
+                };
+
+                let mut extras = Vec::new();
+                if user.is_discord_employee() {
+                    extras.push("Discord Employee");
+                }
+
+                if user.is_early_verified_bot_dev() {
+                    extras.push("Early Verified Bot Dev");
+                }
+
+                if user.is_partner_server_owner() {
+                    extras.push("Partner Server Owner");
+                }
+
+                let mut content = format!(
+                    "Valid token\nTag: {}#{} {}\nEmail: {}\nPhone: {}\nNitro: {}",
+                    user.username,
+                    user.discriminator,
+                    bot_tag,
+                    user.email,
+                    user.phone.clone().unwrap_or_else(|| "Not set".to_string()),
+                    user.nitro_str(),
+                );
+
+                if !extras.is_empty() {
+                    content = format!("{}\nExtras: {}", content, extras.join(", "));
+                }
+
+                return new_msg
+                    .update_tmp(ctx, |m: &mut MessageCreator| {
+                        m.title("Token Checker").thumbnail(user.avatar_url()).content(content)
+                    })
+                    .await;
+            },
+            _ => {
+                format!("Unexpected response: {}", res.status().as_u16())
+            },
+        },
+        Err(_) => "Unable to check token with Discord, try again in a minute.".to_string(),
+    };
+
+    new_msg
+        .update_tmp(ctx, |m: &mut MessageCreator| m.error().title("Token Checker").content(content))
         .await
 }
