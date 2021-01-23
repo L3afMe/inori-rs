@@ -43,6 +43,7 @@ jobs:
       with:
           toolchain: nightly
           override: true
+          components: clippy
 
     - run: cargo clippy -- -D warnings
 
