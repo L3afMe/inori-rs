@@ -171,17 +171,7 @@ pub async fn normal_message(ctx: &Context, msg: &Message) {
             "~".to_string()
         };
 
-        let res = reqwest::Client::new()
-            .post(&format!("https://discord.com/api/v8/channels/{}/messages", msg.channel_id.0))
-            .header("Authorization", &ctx.http.token)
-            .json(&serde_json::json!({ "content": format!("{}grab", pfx) }))
-            .send()
-            .await;
-
-        let sniped = match res {
-            Ok(res) => res.status().as_u16() == 200,
-            Err(_) => false,
-        };
+        let new_msg = msg.channel_id.say(&ctx.http, format!("{}grab", pfx)).await;
 
         let channel_name = match ctx.http.get_channel(msg.channel_id.0).await.unwrap() {
             Channel::Guild(channel) => channel.name,
@@ -190,12 +180,16 @@ pub async fn normal_message(ctx: &Context, msg: &Message) {
 
         let guild_name = guild_id.name(&ctx.cache).await.unwrap_or_else(|| "Unknown".to_string());
 
-        let sniped_msg = if sniped {
+        let sniped_msg = if new_msg.is_ok() {
             format!("Sent message in [{} > {}]", guild_name, channel_name)
         } else {
             "Failed to send message".to_string()
         };
         inori_info!("SlotBot", "{}", sniped_msg);
+
+        if let Ok(msg) = new_msg {
+            let _ = ctx.http.delete_message(msg.channel_id.0, msg.id.0).await;
+        }
 
         return;
     }
