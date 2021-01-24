@@ -16,7 +16,7 @@ use crate::{
     InoriChannelUtils, InoriMessageUtils, MessageCreator, Settings,
 };
 
-const RESPONSES: Lazy<HashMap<String, Vec<String>>> = Lazy::new(|| {
+static RESPONSES: Lazy<HashMap<String, Vec<String>>> = Lazy::new(|| {
     let mut map = HashMap::new();
 
     map.insert("anal".to_string(), vec!["{0} gave clapped {1}'s cheeks".to_string()]);
