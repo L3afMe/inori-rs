@@ -30,7 +30,7 @@ use crate::{
     },
     settings::{load_settings, save_settings, setup_settings},
     utils::{
-        consts::{AUTHOR_DISC, PROG_NAME},
+        consts::{AUTHOR_DISC, GITHUB_LINK, PROG_NAME},
         version::check_is_latest,
     },
 };
@@ -62,9 +62,9 @@ async fn main() {
         println!(
             "Welcome to {}!\n\nI was unable to find a config file\nso I'll walk you through making a new one.\n\nIf \
              you have any issues during setup or\nwhile using the bot, feel free to contact\n{} on Discord for \
-             support!\n\nIf you wish to stop the bot at any time,\npress Control+C and the bot will force stop.
-        \nThis will only take a minute!",
-            PROG_NAME, AUTHOR_DISC
+             support!\n\nIf you wish to stop the bot at any time,\npress Control+C and the bot will force stop.\n\nIf \
+             you have a GitHub account don't forget\nto star the repo!\n{}\n\nThis will only take a minute!",
+            PROG_NAME, AUTHOR_DISC, GITHUB_LINK
         );
 
         let settings = setup_settings(&toml::map::Map::new()).await;
