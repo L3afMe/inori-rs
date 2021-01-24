@@ -3,6 +3,7 @@ use std::{
     path::Path,
 };
 
+use colored::Colorize;
 use serenity::{
     framework::standard::{macros::command, Args, CommandResult},
     http::AttachmentType,
@@ -12,7 +13,7 @@ use serenity::{
 };
 use tokio::{fs::File, prelude::*};
 
-use crate::{save_settings, InoriChannelUtils, InoriMessageUtils, MessageCreator, Settings};
+use crate::{inori_info, save_settings, InoriChannelUtils, InoriMessageUtils, MessageCreator, Settings};
 
 #[command]
 #[aliases("ps")]
@@ -330,7 +331,7 @@ async fn change(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let avatar = read_image((&path_str).to_string())?;
     user.edit(&ctx.http, |p| p.avatar(Some(&avatar))).await.unwrap();
 
-    println!("[PfpSwitcher] Changing pfps");
+    inori_info!("PfpSwitcher", "Changing pfps");
 
     let pfp_url = ctx.http.get_current_user().await.unwrap().avatar_url().unwrap();
 

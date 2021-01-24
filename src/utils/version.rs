@@ -1,25 +1,38 @@
 use std::cmp::max;
 
+use colored::Colorize;
+
 use super::consts;
+use crate::{inori_debug, inori_info};
 
 pub async fn check_is_latest() {
-    println!("[Updater] Checking for update");
+    inori_info!("Updater", "Checking for update");
     let latest = get_version().await;
 
+    inori_debug!(
+        "Updater",
+        "Comparing current version ({}) to latest tag ({})",
+        consts::PROG_VERSION,
+        latest
+    );
+
     if compare_versions(&consts::PROG_VERSION, &latest) {
-        println!(
-            "[Updater] New update available at {}/releases\n[Updater] Current version: {}\n[Updater] Available \
-             version: {}",
-            consts::GITHUB_LINK,
-            consts::PROG_VERSION,
-            latest
-        );
+        inori_info!("Updater", "New update available at {}/releases", consts::GITHUB_LINK);
+        inori_info!("Updater", "Current version: {}", consts::PROG_VERSION);
+        inori_info!("Updater", "Available version: {}", latest);
     } else {
-        println!("[Updater] No new update found");
+        inori_info!("Updater", "No new update found");
     }
 }
 
 async fn get_version() -> String {
+    inori_debug!(
+        "Updater",
+        "Checking latest tag at https://api.github.com/repos/{}/{}/tags",
+        consts::GITHUB_USERNAME,
+        consts::GITHUB_REPO
+    );
+
     let res = reqwest::Client::new()
         .get(&format!(
             "https://api.github.com/repos/{}/{}/tags",
@@ -33,6 +46,8 @@ async fn get_version() -> String {
         .text()
         .await
         .unwrap();
+
+    inori_debug!("Updater", "Got response from GitHub: {}", &res);
 
     let obj = serde_json::from_str::<serde_json::Value>(&res).unwrap();
 

@@ -1,3 +1,4 @@
+use colored::Colorize;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use reqwest::StatusCode;
@@ -10,7 +11,10 @@ use serenity::{
     prelude::Context,
 };
 
-use crate::models::{commands::CommandCounter, settings::Settings};
+use crate::{
+    inori_error, inori_info, inori_success,
+    models::{commands::CommandCounter, settings::Settings},
+};
 
 #[hook]
 pub async fn before(ctx: &Context, msg: &Message, command_name: &str) -> bool {
@@ -30,7 +34,7 @@ pub async fn before(ctx: &Context, msg: &Message, command_name: &str) -> bool {
             msg.delete(&ctx.http).await.unwrap();
         }
 
-        println!("[Command] Running '{}'", command_name);
+        inori_info!("Command", "Running '{}'", command_name);
     }
 
     amatch
@@ -43,8 +47,8 @@ pub async fn after(ctx: &Context, msg: &Message, command_name: &str, res: Comman
     }
 
     match res {
-        Ok(()) => println!("[Command] Finished running '{}'", command_name),
-        Err(why) => println!("[Command] Finishing running '{}' with error {:?}", command_name, why),
+        Ok(()) => inori_info!("Command", "Finished running '{}'", command_name),
+        Err(why) => inori_error!("Command", "Finishing running '{}' with error {:?}", command_name, why),
     }
 }
 
@@ -81,9 +85,11 @@ pub async fn normal_message(ctx: &Context, msg: &Message) {
                 match res.status() {
                     StatusCode::OK => {
                         if msg.is_private() {
-                            println!(
-                                "[Sniper] Successfully sniped nitro in DM's with {}#{}",
-                                msg.author.name, msg.author.discriminator
+                            inori_success!(
+                                "Sniper",
+                                "Successfully sniped nitro in DM's with {}#{}",
+                                msg.author.name,
+                                msg.author.discriminator,
                             )
                         } else {
                             let channel_name = match ctx.http.get_channel(msg.channel_id.0).await.unwrap() {
@@ -98,30 +104,34 @@ pub async fn normal_message(ctx: &Context, msg: &Message) {
                                 .await
                                 .unwrap_or_else(|| "Unknown".to_string());
 
-                            println!(
-                                "[Sniper] Successfully sniped nitro in [{} > {}] from {}#{}",
-                                guild_name, channel_name, msg.author.name, msg.author.discriminator
+                            inori_success!(
+                                "Sniper",
+                                "Successfully sniped nitro in [{} > {}] from {}#{}",
+                                guild_name,
+                                channel_name,
+                                msg.author.name,
+                                msg.author.discriminator,
                             )
                         }
                     },
                     StatusCode::METHOD_NOT_ALLOWED => {
-                        println!("[Sniper] There was an error on Discord's side.");
+                        inori_info!("Nitro Sniper", "There was an error on Discord's side.");
                     },
                     StatusCode::NOT_FOUND => {
-                        println!("[Sniper] Code was fake or expired.");
+                        inori_info!("Nitro Sniper", "Code was fake or expired.");
                     },
                     StatusCode::BAD_REQUEST => {
-                        println!("[Sniper] Code was already redeemed.");
+                        inori_info!("Nitro Sniper", "Code was already redeemed.");
                     },
                     StatusCode::TOO_MANY_REQUESTS => {
-                        println!("[Sniper] Ratelimited.");
+                        inori_info!("Nitro Sniper", "Ratelimited.");
                     },
                     unknown => {
-                        println!("[Sniper] Received unknown response ({})", unknown.as_str());
+                        inori_info!("Nitro Sniper", "Received unknown response ({})", unknown.as_str());
                     },
                 }
             } else {
-                println!("[Sniper] Erroring while POSTing nitro code");
+                inori_info!("Nitro Sniper", "Erroring while POSTing nitro code");
             }
         }
     }
@@ -185,7 +195,7 @@ pub async fn normal_message(ctx: &Context, msg: &Message) {
         } else {
             "Failed to send message".to_string()
         };
-        println!("[SlotBot] {}", sniped_msg);
+        inori_info!("SlotBot", "{}", sniped_msg);
 
         return;
     }
@@ -220,13 +230,16 @@ pub async fn normal_message(ctx: &Context, msg: &Message) {
             .await
             .unwrap_or_else(|| "Unknown".to_string());
 
-        println!(
-            "[Giveaway] Detected giveaway in [{} > {}] waiting {} seconds",
-            guild_name, channel_name, config.delay
+        inori_info!(
+            "Giveaway",
+            "Detected giveaway in [{} > {}] waiting {} seconds",
+            guild_name,
+            channel_name,
+            config.delay,
         );
 
         tokio::time::delay_for(tokio::time::Duration::from_secs(config.delay)).await;
         msg.react(&ctx.http, ReactionType::Unicode("🎉".to_string())).await.unwrap();
-        println!("[Giveaway] Joined giveaway");
+        inori_info!("Giveaway", "Joined giveaway");
     }
 }

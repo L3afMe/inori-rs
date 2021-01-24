@@ -7,6 +7,7 @@ mod utils;
 
 use std::{collections::HashMap, fs::File, io::Write, path::Path, sync::Arc};
 
+pub use colored::Colorize;
 use serenity::{
     framework::standard::{macros::hook, Command, CommandGroup, OnlyIn, StandardFramework},
     model::channel::Message,
@@ -43,13 +44,15 @@ async fn dynamic_prefix(ctx: &Context, _msg: &Message) -> Option<String> {
 
 #[tokio::main]
 async fn main() {
+    utils::logging::setup_logger().expect("Unable to setup logger");
+
     check_is_latest().await;
 
     let settings = if Path::exists(Path::new(&"config.toml")) {
         match load_settings().await {
             Ok(settings) => settings,
             Err(why) => {
-                println!("[Config] Error while loading config: {}", why);
+                inori_panic!("Config", "Error while loading config: {}", why);
 
                 return;
             },
@@ -64,10 +67,11 @@ async fn main() {
         );
 
         let settings = setup_settings(&toml::map::Map::new()).await;
-        println!(
-            "[Config] Config setup and ready to use\n[Bot] Make sure to run {}setup which will create an new server \
-             and add emotes that are used throughout the bot",
-            &settings.command_prefix
+        inori_info!(
+            "Config",
+            "Config setup and ready to use\n[Bot] Make sure to run {}setup which will create an new server and add \
+             emotes that are used throughout the bot",
+            &settings.command_prefix,
         );
 
         settings
@@ -98,7 +102,7 @@ async fn main() {
         .group(&UTILITY_GROUP)
         .group(&MODERATION_GROUP);
 
-    println!("[Bot] Configured framework");
+    inori_info!("Bot", "Configured framework");
 
     let mut client = Client::builder(&settings.user_token)
         .event_handler(Handler)
@@ -113,10 +117,11 @@ async fn main() {
         data.insert::<ShardManagerContainer>(Arc::clone(&client.shard_manager));
     }
 
-    println!("[Bot] Loaded client\n[Bot] Starting client");
+    inori_info!("Bot", "Loaded client");
+    inori_info!("Bot", "Starting {} v{}", utils::consts::PROG_NAME, utils::consts::PROG_VERSION);
 
     if let Err(why) = client.start().await {
-        println!("[Bot] Client error: {:?}", why);
+        inori_error!("Bot", "Client error: {:?}", why);
     }
 }
 
@@ -218,5 +223,5 @@ fn commands_to_md(groups: &[&'static CommandGroup]) {
     let mut file = File::create("COMMANDS.md").expect("Unable to create COMMANDS.md");
     file.write_all(output.as_bytes()).expect("Unable to write to COMMANDS.md");
 
-    println!("Output saved to COMMANDS.md")
+    inori_success!("COMMANDS.md Generator", "Output saved to COMMANDS.md")
 }

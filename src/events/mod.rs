@@ -4,6 +4,7 @@ pub mod help;
 
 use std::{fs::DirEntry, io::Error, path::Path, sync::Arc};
 
+use colored::Colorize;
 use rand::Rng;
 use serenity::{async_trait, model::gateway::Ready, prelude::*, utils::read_image};
 use tokio::{
@@ -11,16 +12,19 @@ use tokio::{
     time::{delay_for, Duration},
 };
 
-use crate::models::settings::Settings;
+use crate::{inori_info, inori_success, models::settings::Settings, utils::consts};
 
 pub struct Handler;
 
 #[async_trait]
 impl EventHandler for Handler {
     async fn ready(&self, ctx: Context, ready: Ready) {
-        println!(
-            "[Bot] Client started, connected as {}#{:0>4}",
-            ready.user.name, ready.user.discriminator
+        inori_success!(
+            "Bot",
+            "{} started, connected as {}#{:0>4}",
+            consts::PROG_NAME,
+            ready.user.name,
+            ready.user.discriminator,
         );
 
         spawn_pfp_change_thread(Arc::new(Mutex::new(ctx))).await;
@@ -58,7 +62,7 @@ async fn spawn_pfp_change_thread(ctx: Arc<Mutex<Context>>) {
                                 read_image(format!("./pfps/{}", new_pfp.file_name().into_string().unwrap())).unwrap();
                             user.edit(&ctx.http, |p| p.avatar(Some(&avatar))).await.unwrap();
 
-                            println!("[PfpSwitcher] Changing pfps");
+                            inori_info!("PfpSwitcher", "Changing pfps");
                             break;
                         }
                     }

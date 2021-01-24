@@ -1,10 +1,14 @@
+use colored::Colorize;
 use serenity::{
     framework::standard::{macros::hook, DispatchError, Reason},
     model::channel::Message,
     prelude::Context,
 };
 
-use crate::models::discord::{InoriChannelUtils, MessageCreator};
+use crate::{
+    inori_error,
+    models::discord::{InoriChannelUtils, MessageCreator},
+};
 
 #[hook]
 pub async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
@@ -14,7 +18,7 @@ pub async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) 
         DispatchError::Ratelimited(duration) => {
             let content = format!("Try this again in {} seconds.", duration.as_secs());
 
-            println!("[Error] Ratelimit, {}", content);
+            inori_error!("Error", "Ratelimit, {}", content);
             let _ = msg
                 .channel_id
                 .send_tmp(ctx, |m: &mut MessageCreator| m.error().title("Ratelimit").content(content))
@@ -32,7 +36,7 @@ pub async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) 
                         .to_string(),
                     _ => {
                         let content = format!("Undocumted error, please report this to L3af#0001\nError: `{:?}``", err);
-                        println!("{}", content);
+                        inori_error!("Error", "{}", content);
 
                         content
                     },
@@ -74,9 +78,10 @@ pub async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) 
         },
 
         _ => {
-            println!(
+            inori_error!(
+                "Error",
                 "Unhandled dispatch error, please contact #L3af#0001 about this.\nError: {:?}",
-                error
+                error,
             );
         },
     };

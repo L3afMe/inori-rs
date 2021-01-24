@@ -15,11 +15,6 @@ use crate::{
 };
 
 async fn get_rule_34_posts(tags: String) -> Rule34Posts {
-    println!(
-        "{}",
-        format!("https://rule34.xxx/index.php?page=dapi&s=post&q=index&tags={}", tags)
-    );
-
     let xml = reqwest::get(&format!("https://rule34.xxx/index.php?page=dapi&s=post&q=index&tags={}", tags))
         .await
         .unwrap()

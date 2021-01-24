@@ -5,9 +5,11 @@ use std::{
     io::{Read, Write},
 };
 
+use colored::Colorize;
 use tokio::io::{self, AsyncBufReadExt};
 
 use crate::{
+    inori_error, inori_info, inori_panic, inori_success,
     models::{
         discord::BasicUser,
         settings::{AutoDeleteConfig, GiveawayConfig, PfpSwitcher, Settings, SlotBotConfig},
@@ -528,14 +530,15 @@ pub async fn setup_settings(settings: &toml::map::Map<String, toml::Value>) -> S
     };
 
     if let Err(why) = _save_settings(&settings) {
-        panic!("[Config] Error while saving config: {}", why);
+        inori_panic!("Config", "Error while saving config: {}", why);
     }
 
     return settings;
 }
 pub async fn load_settings() -> Result<Settings, String> {
-    let mut contents = String::new();
+    inori_info!("Config", "Loading and validating config");
 
+    let mut contents = String::new();
     let mut f = match File::open("config.toml") {
         Ok(file) => file,
         Err(why) => {
@@ -562,15 +565,15 @@ pub async fn load_settings() -> Result<Settings, String> {
 
     let config = setup_settings(&res).await;
 
-    println!("[Config] Load successful");
+    inori_success!("Config", "Load successful");
 
     Ok(config)
 }
 
 pub fn save_settings(settings: &Settings) {
     match _save_settings(settings) {
-        Ok(_) => {},
-        Err(err) => println!("[Config] Error while saving config: {}", err),
+        Ok(_) => inori_success!("Config", "Save successful"),
+        Err(err) => inori_error!("Config", "Error while saving config: {}", err),
     }
 }
 
@@ -588,6 +591,5 @@ pub fn _save_settings(settings: &Settings) -> Result<(), String> {
     );
 
     try_or_msg!(f.sync_data(), "Unable to write config to 'config.toml'".to_string());
-    println!("[Config] Save successful");
     Ok(())
 }
