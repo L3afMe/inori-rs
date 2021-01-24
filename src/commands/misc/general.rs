@@ -1,8 +1,10 @@
+use colorsys::{ColorAlpha, ColorTransform, Hsl, Rgb};
 use rand::Rng;
 use serenity::{
     framework::standard::{macros::command, Args, CommandResult},
     model::{channel::Message, prelude::ReactionType},
     prelude::Context,
+    utils::Colour,
 };
 
 use crate::{
@@ -29,7 +31,7 @@ async fn about(ctx: &Context, msg: &Message) -> CommandResult {
                 .field("Version", consts::PROG_VERSION, true)
                 .field(
                     "Library",
-                    "[Serenity](https://github.com/serenity-rs/serenity) with \
+                    "[Serenity v0.9.4](https://github.com/serenity-rs/serenity) with \
                     [SelfBot support](https://github.com/L3afMe/serenity-selfbot-support)",
                     true,
                 )
@@ -246,4 +248,144 @@ async fn hypesquad(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 .await
         },
     };
+}
+
+macro_rules! parse_color {
+    ($color_name:literal, $ctx:expr, $msg:expr, $arg:expr) => {
+        if let Ok(color) = $arg.parse::<f64>() {
+            color
+        } else {
+            return $msg
+                .channel_id
+                .send_tmp($ctx, |m: &mut MessageCreator| {
+                    m.error().title("Color").content(format!("Unable to parse {}", $color_name))
+                })
+                .await;
+        }
+    };
+}
+
+#[command]
+#[aliases("colour")]
+#[description("View a color")]
+#[usage("<color>")]
+#[example("#FAB1ED")]
+#[example("150 177 237")]
+#[example("150 177 237 0.5")]
+#[min_args(1)]
+#[max_args(4)]
+async fn color(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    let split = args.rest().split(',').map(|f| f.trim().to_string()).collect::<Vec<String>>();
+    let rgb = if args.len() == 4 || split.len() == 4 {
+        let args = if split.len() == 4 {
+            split
+        } else {
+            args.rest().split(' ').map(|f| f.to_string()).collect::<Vec<String>>()
+        };
+
+        let r = parse_color!("red", ctx, msg, args[0]);
+        let g = parse_color!("green", ctx, msg, args[1]);
+        let b = parse_color!("blue", ctx, msg, args[2]);
+        let a = parse_color!("alpha", ctx, msg, args[3]);
+
+        Rgb::from((r, g, b, a))
+    } else if args.len() == 3 || split.len() == 3 {
+        let args = if split.len() == 3 {
+            split
+        } else {
+            args.rest().split(' ').map(|f| f.to_string()).collect::<Vec<String>>()
+        };
+
+        let r = parse_color!("red", ctx, msg, args[0]);
+        let g = parse_color!("green", ctx, msg, args[1]);
+        let b = parse_color!("blue", ctx, msg, args[2]);
+
+        Rgb::from((r, g, b))
+    } else if args.len() == 1 {
+        if let Ok(color) = Rgb::from_hex_str(args.rest()) {
+            color
+        } else {
+            return msg
+                .channel_id
+                .send_tmp(ctx, |m: &mut MessageCreator| {
+                    m.error().title("Error").content("Unable to parse hexadecimal value")
+                })
+                .await;
+        }
+    } else {
+        return msg
+            .channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error()
+                    .title("Error")
+                    .content("Invalid args given!\nExpected: 1, 3 or 4, Given: 2")
+            })
+            .await;
+    };
+
+    let mut rgb_invert = rgb.clone();
+    rgb_invert.invert();
+
+    let hsl = Hsl::from(rgb.clone());
+    let mut hsl_invert = hsl.clone();
+    hsl_invert.invert();
+
+    let serenity_color = Colour::from_rgb(
+        rgb.get_red().floor() as u8,
+        rgb.get_green().round() as u8,
+        rgb.get_blue().floor() as u8,
+    );
+
+    msg.channel_id
+        .send_tmp(ctx, |m: &mut MessageCreator| {
+            m.colour(serenity_color)
+                .title("Color")
+                .field(
+                    "RGBA",
+                    format!(
+                        "{:.2}, {:.2}, {:.2}, {:.2}",
+                        rgb.get_red(),
+                        rgb.get_green(),
+                        rgb.get_blue(),
+                        rgb.get_alpha()
+                    ),
+                    true,
+                )
+                .field(
+                    "RGBA Inverted",
+                    format!(
+                        "{:.2}, {:.2}, {:.2}, {:.2}",
+                        rgb_invert.get_red(),
+                        rgb_invert.get_green(),
+                        rgb_invert.get_blue(),
+                        rgb_invert.get_alpha()
+                    ),
+                    true,
+                )
+                .field("Hexadecimal", rgb.to_hex_string(), true)
+                .field("Hexadecimal Inverted", rgb_invert.to_hex_string(), true)
+                .field(
+                    "HSLA",
+                    format!(
+                        "{:.2}, {:.2}, {:.2}, {:.2}",
+                        hsl.get_hue(),
+                        hsl.get_saturation(),
+                        hsl.get_lightness(),
+                        hsl.get_alpha()
+                    ),
+                    true,
+                )
+                .field(
+                    "HSLA Inverted",
+                    format!(
+                        "{:.2}, {:.2}, {:.2}, {:.2}",
+                        hsl_invert.get_hue(),
+                        hsl_invert.get_saturation(),
+                        hsl_invert.get_lightness(),
+                        hsl_invert.get_alpha()
+                    ),
+                    true,
+                )
+        })
+        .await
 }
