@@ -1,8 +1,4 @@
-use std::{
-    fs::create_dir,
-    io::{Read, Write},
-    path::Path,
-};
+use std::io::{Read, Write};
 
 use colored::Colorize;
 use fern::{Dispatch, InitError};
@@ -19,14 +15,9 @@ pub fn exit() {
 }
 
 pub fn setup_logger() -> Result<(), InitError> {
-    let log_path = Path::new("logs");
-    if !log_path.exists() {
-        if let Err(why) = create_dir(log_path) {
-            panic!("Unable to create log/ directory!\nError: {}", why);
-        }
+    if cfg!(windows) {
+        colored::control::set_override(false);
     }
-
-    let now = chrono::Local::now().format("%Y-%m-%d %H:%M:%S");
 
     Dispatch::new()
         .format(move |out, message, _record| {
@@ -36,7 +27,6 @@ pub fn setup_logger() -> Result<(), InitError> {
         .level_for("tracing::span", LevelFilter::Off)
         .level(LevelFilter::Info)
         .chain(std::io::stdout())
-        .chain(fern::log_file(format!("logs/{}.log", now))?)
         .apply()?;
 
     inori_success!("Log", "Successfully setup logger");
