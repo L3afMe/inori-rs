@@ -1,5 +1,6 @@
 target/
 releases/
+logs/
 Cargo.lock
 
 config.toml
