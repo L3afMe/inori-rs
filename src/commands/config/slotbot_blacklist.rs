@@ -4,7 +4,7 @@ use serenity::{
     prelude::*,
 };
 
-use crate::{save_settings, InoriChannelUtils, MessageCreator, Settings};
+use crate::{parse_arg, save_settings, InoriChannelUtils, MessageCreator, Settings};
 
 #[command]
 #[aliases("bl")]
@@ -39,15 +39,8 @@ async fn remove(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                 })
                 .await;
         }
-    } else if let Ok(guild) = args.single::<u64>() {
-        guild
     } else {
-        return msg
-            .channel_id
-            .send_tmp(ctx, |m: &mut MessageCreator| {
-                m.error().title("SlotBot").content("Unable to parse guild id")
-            })
-            .await;
+        parse_arg!(ctx, msg, args, "guild id", u64)
     };
 
     let data = ctx.data.write().await;
@@ -79,7 +72,7 @@ async fn remove(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
         return msg
             .channel_id
             .send_tmp(ctx, |m: &mut MessageCreator| {
-                m.title("SlotBot").content("Removed guild from blacklist")
+                m.success().title("SlotBot").content("Removed guild from blacklist")
             })
             .await;
     };
@@ -103,16 +96,10 @@ async fn add(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                 })
                 .await;
         }
-    } else if let Ok(guild) = args.single::<u64>() {
-        guild
     } else {
-        return msg
-            .channel_id
-            .send_tmp(ctx, |m: &mut MessageCreator| {
-                m.error().title("SlotBot").content("Unable to parse guild id")
-            })
-            .await;
+        parse_arg!(ctx, msg, args, "guild id", u64)
     };
+
 
     let data = ctx.data.write().await;
     let mut settings = data.get::<Settings>().expect("Expected Settings in TypeMap.").lock().await;
@@ -130,13 +117,14 @@ async fn add(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     } else {
         settings.slotbot.blacklisted_guilds.push(guild_id);
         save_settings(&settings);
+
         drop(settings);
         drop(data);
 
         return msg
             .channel_id
             .send_tmp(ctx, |m: &mut MessageCreator| {
-                m.title("SlotBot").content("Added guild to blacklist")
+                m.success().title("SlotBot").content("Added guild to blacklist")
             })
             .await;
     };

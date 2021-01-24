@@ -13,7 +13,7 @@ use serenity::{
 };
 use tokio::{fs::File, prelude::*};
 
-use crate::{inori_info, save_settings, InoriChannelUtils, InoriMessageUtils, MessageCreator, Settings};
+use crate::{inori_info, parse_arg, save_settings, InoriChannelUtils, InoriMessageUtils, MessageCreator, Settings};
 
 #[command]
 #[aliases("ps")]
@@ -51,7 +51,7 @@ async fn toggle(ctx: &Context, msg: &Message) -> CommandResult {
 
     msg.channel_id
         .send_tmp(ctx, |m: &mut MessageCreator| {
-            m.title("Profile Picture Switcher").content(content)
+            m.success().title("Profile Picture Switcher").content(content)
         })
         .await
 }
@@ -62,23 +62,28 @@ async fn enable(ctx: &Context, msg: &Message) -> CommandResult {
     let data = ctx.data.write().await;
     let mut settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
 
-    let content = if settings.pfp_switcher.enabled {
-        "Already enabled"
+    if settings.pfp_switcher.enabled {
+        drop(settings);
+        drop(data);
+
+        msg.channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.info().title("Profile Picture Switcher").content("Already enabled")
+            })
+            .await
     } else {
         settings.pfp_switcher.enabled = true;
         save_settings(&settings);
 
-        "Enabled"
-    };
+        drop(settings);
+        drop(data);
 
-    drop(settings);
-    drop(data);
-
-    msg.channel_id
-        .send_tmp(ctx, |m: &mut MessageCreator| {
-            m.title("Profile Picture Switcher").content(content)
-        })
-        .await
+        msg.channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.success().title("Profile Picture Switcher").content("Enabled")
+            })
+            .await
+    }
 }
 
 #[command]
@@ -87,23 +92,28 @@ async fn disable(ctx: &Context, msg: &Message) -> CommandResult {
     let data = ctx.data.write().await;
     let mut settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
 
-    let content = if settings.pfp_switcher.enabled {
+    if settings.pfp_switcher.enabled {
         settings.pfp_switcher.enabled = false;
         save_settings(&settings);
 
-        "Disabled"
+        drop(settings);
+        drop(data);
+
+        msg.channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.success().title("Profile Picture Switcher").content("Disabled")
+            })
+            .await
     } else {
-        "Already disabled"
-    };
+        drop(settings);
+        drop(data);
 
-    drop(settings);
-    drop(data);
-
-    msg.channel_id
-        .send_tmp(ctx, |m: &mut MessageCreator| {
-            m.title("Profile Picture Switcher").content(content)
-        })
-        .await
+        msg.channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.info().title("Profile Picture Switcher").content("Already disabled")
+            })
+            .await
+    }
 }
 
 #[command]
@@ -113,60 +123,59 @@ async fn disable(ctx: &Context, msg: &Message) -> CommandResult {
 #[example("1")]
 #[num_args(1)]
 async fn mode(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let data = ctx.data.write().await;
-    let mut settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
+    if args.is_empty() {
+        let data = ctx.data.write().await;
+        let settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
 
-    let content = if args.is_empty() {
         let sort = match settings.pfp_switcher.mode {
             0 => "Random",
             _ => "Alphabetical",
         };
 
-        format!("Sort mode currently set to {}", sort)
-    } else if let Ok(val) = args.single::<u8>() {
-        if val <= 1 {
-            settings.pfp_switcher.mode = val;
-            save_settings(&settings);
-
-            let sort = match val {
-                0 => "Random",
-                _ => "Alphabetical",
-            };
-
-            format!("Sort mode set to `{}`", sort)
-        } else {
-            drop(settings);
-            drop(data);
-
-            return msg
-                .channel_id
-                .send_tmp(ctx, |m: &mut MessageCreator| {
-                    m.error()
-                        .title("Profile Picture Switcher")
-                        .content("Invalid mode specified.\n**Valid modes**\n`0` - Random\n`1` - Alphabetical")
-                })
-                .await;
-        }
-    } else {
         drop(settings);
         drop(data);
 
         return msg
             .channel_id
             .send_tmp(ctx, |m: &mut MessageCreator| {
-                m.error().title("Profile Picture Switcher").content("Unable to parse mode")
+                m.info()
+                    .title("Profile Picture Switcher")
+                    .content(format!("Sort mode currently set to {}", sort))
             })
             .await;
-    };
+    }
 
-    drop(settings);
-    drop(data);
+    let val = parse_arg!(ctx, msg, args, "mode", u8);
+    if val <= 1 {
+        let data = ctx.data.write().await;
+        let mut settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
+        settings.pfp_switcher.mode = val;
+        save_settings(&settings);
 
-    msg.channel_id
-        .send_tmp(ctx, |m: &mut MessageCreator| {
-            m.title("Profile Picture Switcher").content(content)
-        })
-        .await
+        drop(settings);
+        drop(data);
+
+        let sort = match val {
+            0 => "Random",
+            _ => "Alphabetical",
+        };
+
+        msg.channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.success()
+                    .title("Profile Picture Switcher")
+                    .content(format!("Sort mode set to `{}`", sort))
+            })
+            .await
+    } else {
+        msg.channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error()
+                    .title("Profile Picture Switcher")
+                    .content("Invalid mode specified.\n**Valid modes**\n`0` - Random\n`1` - Alphabetical")
+            })
+            .await
+    }
 }
 
 #[command]
@@ -176,53 +185,52 @@ async fn mode(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 )]
 #[usage("<minutes>")]
 #[example("45")]
-async fn delay(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    let arg = if args.is_empty() {
-        "current"
-    } else {
-        args.current().unwrap()
-    };
+async fn delay(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    if args.is_empty() {
+        let data = ctx.data.write().await;
+        let settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
+        let delay = settings.pfp_switcher.delay;
 
-    let data = ctx.data.write().await;
-    let mut settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
+        drop(settings);
+        drop(data);
 
-    let content = if arg.to_lowercase().eq("current") {
-        format!("Delay currently set to {} minutes", settings.pfp_switcher.delay)
-    } else if let Ok(delay) = arg.parse::<u32>() {
-        if delay < 10 {
-            return msg
-                .channel_id
-                .send_tmp(ctx, |m: &mut MessageCreator| {
-                    m.error()
-                        .title("Profile Picture Switcher")
-                        .content("Minimum delay is 45 minutes to avoid rate limiting")
-                })
-                .await;
-        } else {
-            settings.pfp_switcher.delay = delay;
-            save_settings(&settings);
-
-            format!("Delay set to {} minutes", delay)
-        }
-    } else {
         return msg
             .channel_id
             .send_tmp(ctx, |m: &mut MessageCreator| {
-                m.error()
+                m.info()
                     .title("Profile Picture Switcher")
-                    .content("Unable to parse delay to number")
+                    .content(format!("Delay currently set to {} minutes", delay))
             })
             .await;
-    };
+    }
 
-    drop(settings);
-    drop(data);
+    let delay = parse_arg!(ctx, msg, args, "delay", u32);
 
-    msg.channel_id
-        .send_tmp(ctx, |m: &mut MessageCreator| {
-            m.title("Profile Picture Switcher").content(content)
-        })
-        .await
+    if delay < 10 {
+        msg.channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error()
+                    .title("Profile Picture Switcher")
+                    .content("Minimum delay is 10 minutes to avoid rate limiting")
+            })
+            .await
+    } else {
+        let data = ctx.data.write().await;
+        let mut settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
+        settings.pfp_switcher.delay = delay;
+        save_settings(&settings);
+
+        drop(settings);
+        drop(data);
+
+        msg.channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.success()
+                    .title("Profile Picture Switcher")
+                    .content(format!("Delay set to {} minutes", delay))
+            })
+            .await
+    }
 }
 
 #[command]
@@ -253,15 +261,22 @@ async fn add(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         file_name = format!("{}{}", file_name, ext);
     }
 
-    if !Path::new("./pfps/").exists() {
-        create_dir("pfps").unwrap();
+    if !Path::new("./pfps/").exists() && create_dir("pfps").is_err() {
+        return msg
+            .channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error()
+                    .title("Profile Picture Switcher")
+                    .content("Unable to create `pfps/` directory")
+            })
+            .await;
     }
 
     if Path::new(&format!("./pfps/{}", file_name)).is_file() {
         return msg
             .channel_id
             .send_tmp(ctx, |m: &mut MessageCreator| {
-                m.error()
+                m.warning()
                     .title("Profile Picture Switcher")
                     .content(format!("File named '{}' already exists", file_name))
             })
@@ -280,7 +295,8 @@ async fn add(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
     new_msg
         .update_tmp(ctx, |m: &mut MessageCreator| {
-            m.title("Profile Picture Switcher")
+            m.success()
+                .title("Profile Picture Switcher")
                 .image(atch_url)
                 .content(format!("Successfully added '{}'", file_name))
         })
@@ -300,7 +316,7 @@ async fn change(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         return msg
             .channel_id
             .send_tmp(ctx, |m: &mut MessageCreator| {
-                m.error()
+                m.warning()
                     .title("Profile Picture Switcher")
                     .content("File contains disallowed characters")
             })
@@ -337,7 +353,8 @@ async fn change(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
     new_msg
         .update_noret(ctx, |m: &mut MessageCreator| {
-            m.title("Profile Picture Switcher")
+            m.success()
+                .title("Profile Picture Switcher")
                 .content(format!("Switched profile picture to `{}`", img_str))
                 .image(pfp_url)
         })
@@ -357,7 +374,7 @@ async fn delete(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         return msg
             .channel_id
             .send_tmp(ctx, |m: &mut MessageCreator| {
-                m.error()
+                m.warning()
                     .title("Profile Picture Switcher")
                     .content("File contains disallowed characters")
             })
@@ -382,7 +399,8 @@ async fn delete(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
     msg.channel_id
         .send_tmp(ctx, |m: &mut MessageCreator| {
-            m.title("Profile Picture Switcher")
+            m.success()
+                .title("Profile Picture Switcher")
                 .content(format!("Successfully removed '{}'", img_str))
         })
         .await
@@ -401,7 +419,7 @@ async fn view(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         return msg
             .channel_id
             .send_tmp(ctx, |m| {
-                m.error()
+                m.warning()
                     .title("Profile Picture Switcher")
                     .content("File contains disallowed characters")
             })

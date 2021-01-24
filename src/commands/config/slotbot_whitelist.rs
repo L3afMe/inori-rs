@@ -4,7 +4,7 @@ use serenity::{
     prelude::*,
 };
 
-use crate::{save_settings, InoriChannelUtils, MessageCreator, Settings};
+use crate::{parse_arg, save_settings, InoriChannelUtils, MessageCreator, Settings};
 
 #[command]
 #[aliases("wl")]
@@ -39,16 +39,11 @@ async fn remove(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                 })
                 .await;
         }
-    } else if let Ok(guild) = args.single::<u64>() {
-        guild
     } else {
-        return msg
-            .channel_id
-            .send_tmp(ctx, |m: &mut MessageCreator| {
-                m.error().title("SlotBot").content("Unable to parse guild id")
-            })
-            .await;
+        parse_arg!(ctx, msg, args, "guild id", u64)
     };
+
+
 
     let data = ctx.data.write().await;
     let mut settings = data.get::<Settings>().expect("Expected Settings in TypeMap.").lock().await;
@@ -57,12 +52,11 @@ async fn remove(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
         drop(settings);
         drop(data);
 
-        return msg
-            .channel_id
+        msg.channel_id
             .send_tmp(ctx, |m: &mut MessageCreator| {
                 m.info().title("SlotBot").content("Guild not currently whitelisted")
             })
-            .await;
+            .await
     } else {
         let filtered = settings
             .slotbot
@@ -73,16 +67,16 @@ async fn remove(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
             .collect::<Vec<u64>>();
         settings.slotbot.whitelisted_guilds = filtered;
         save_settings(&settings);
+
         drop(settings);
         drop(data);
 
-        return msg
-            .channel_id
+        msg.channel_id
             .send_tmp(ctx, |m: &mut MessageCreator| {
-                m.title("SlotBot").content("Removed guild from whitelist")
+                m.success().title("SlotBot").content("Removed guild from whitelist")
             })
-            .await;
-    };
+            .await
+    }
 }
 
 #[command]
@@ -103,16 +97,11 @@ async fn add(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                 })
                 .await;
         }
-    } else if let Ok(guild) = args.single::<u64>() {
-        guild
     } else {
-        return msg
-            .channel_id
-            .send_tmp(ctx, |m: &mut MessageCreator| {
-                m.error().title("SlotBot").content("Unable to parse guild id")
-            })
-            .await;
+        parse_arg!(ctx, msg, args, "guild id", u64)
     };
+
+
 
     let data = ctx.data.write().await;
     let mut settings = data.get::<Settings>().expect("Expected Settings in TypeMap.").lock().await;
@@ -121,23 +110,22 @@ async fn add(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
         drop(settings);
         drop(data);
 
-        return msg
-            .channel_id
+        msg.channel_id
             .send_tmp(ctx, |m: &mut MessageCreator| {
                 m.info().title("SlotBot").content("Guild already whitelisted")
             })
-            .await;
+            .await
     } else {
         settings.slotbot.whitelisted_guilds.push(guild_id);
         save_settings(&settings);
+
         drop(settings);
         drop(data);
 
-        return msg
-            .channel_id
+        msg.channel_id
             .send_tmp(ctx, |m: &mut MessageCreator| {
-                m.title("SlotBot").content("Added guild to whitelist")
+                m.success().title("SlotBot").content("Added guild to whitelist")
             })
-            .await;
-    };
+            .await
+    }
 }

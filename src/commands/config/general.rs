@@ -4,7 +4,7 @@ use serenity::{
     prelude::*,
 };
 
-use crate::{save_settings, InoriChannelUtils, MessageCreator, Settings};
+use crate::{parse_arg, save_settings, InoriChannelUtils, MessageCreator, Settings};
 
 #[command]
 #[description("Set the prefix of the bot")]
@@ -25,7 +25,7 @@ async fn prefix(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     drop(data);
 
     msg.channel_id
-        .send_tmp(ctx, |m: &mut MessageCreator| m.title("Prefix").content(content))
+        .send_tmp(ctx, |m: &mut MessageCreator| m.success().title("Prefix").content(content))
         .await
 }
 
@@ -35,7 +35,7 @@ async fn prefix(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[usage("<level>")]
 #[example("0")]
 async fn nsfwfilter(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let content = if args.is_empty() {
+    if args.is_empty() {
         let data = ctx.data.read().await;
         let settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
 
@@ -45,39 +45,53 @@ async fn nsfwfilter(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
             _ => "Disabled",
         };
 
-        format!("Filter level is currently set to {}", level)
-    } else if let Ok(val) = args.single::<u8>() {
-        if val <= 2 {
-            let data = ctx.data.write().await;
-            let mut settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
+        drop(settings);
+        drop(data);
 
-            settings.global_nsfw_level = val;
-            save_settings(&settings);
+        return msg
+            .channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.info()
+                    .title("NSFW")
+                    .content(format!("Filter level is currently set to {}", level))
+            })
+            .await;
+    }
 
-            let level = match val {
-                0 => "Strict",
-                1 => "Moderate",
-                _ => "Disabled",
-            };
+    let val = parse_arg!(ctx, msg, args, "level", u8);
 
-            format!("Filter level set to `{}`", level)
-        } else {
-            return msg
-                .channel_id
-                .send_tmp(ctx, |m: &mut MessageCreator| {
-                    m.error().title("NSFW Filter").content(
-                        "Invalid level specified.\n**Valid levels**\n`0` - Strict\n`1` - Moderate\n`2` - Disabled",
-                    )
-                })
-                .await;
-        }
+    if val <= 2 {
+        let data = ctx.data.write().await;
+        let mut settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
+
+        settings.global_nsfw_level = val;
+        save_settings(&settings);
+
+        let level = match val {
+            0 => "Strict",
+            1 => "Moderate",
+            _ => "Disabled",
+        };
+
+        drop(settings);
+        drop(data);
+
+        msg.channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.success()
+                    .title("NSFW Filter")
+                    .content(format!("Filter level set to `{}`", level))
+            })
+            .await
     } else {
-        "Unable to parse level".to_string()
-    };
-
-    msg.channel_id
-        .send_tmp(ctx, |m: &mut MessageCreator| m.title("NSFW Filter").content(content))
-        .await
+        msg.channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error()
+                    .title("NSFW Filter")
+                    .content("Invalid level specified.\n**Valid levels**\n`0` - Strict\n`1` - Moderate\n`2` - Disabled")
+            })
+            .await
+    }
 }
 
 #[command]
@@ -87,7 +101,7 @@ async fn nsfwfilter(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
 #[usage("<mode>")]
 #[example("2")]
 async fn embedmode(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let content = if args.is_empty() {
+    if args.is_empty() {
         let data = ctx.data.read().await;
         let settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
 
@@ -97,39 +111,51 @@ async fn embedmode(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
             _ => "Always",
         };
 
-        format!("Embed mode is currently set to {}", mode)
-    } else if let Ok(val) = args.single::<u8>() {
-        if val <= 2 {
-            let data = ctx.data.write().await;
-            let mut settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
+        drop(settings);
+        drop(data);
 
-            settings.embed_mode = val;
-            save_settings(&settings);
+        return msg
+            .channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.info()
+                    .title("Embed Mode")
+                    .content(format!("Embed mode is currently set to {}", mode))
+            })
+            .await;
+    }
 
-            let mode = match val {
-                0 => "Never",
-                1 => "Detect",
-                _ => "Always",
-            };
+    let val = parse_arg!(ctx, msg, args, "mode", u8);
 
-            format!("Embed mode set to `{}`", mode)
-        } else {
-            return msg
-                .channel_id
-                .send_tmp(ctx, |m: &mut MessageCreator| {
-                    m.error()
-                        .title("Embed Mode")
-                        .content("Invalid mode specified.\n**Valid Modes**\n`0` - Never\n`1` - Detect\n`2` - Always")
-                })
-                .await;
-        }
+    if val <= 2 {
+        let data = ctx.data.write().await;
+        let mut settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
+
+        settings.embed_mode = val;
+        save_settings(&settings);
+
+        let mode = match val {
+            0 => "Never",
+            1 => "Detect",
+            _ => "Always",
+        };
+
+        drop(settings);
+        drop(data);
+
+        msg.channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.success().title("Embed Mode").content(format!("Embed mode set to `{}`", mode))
+            })
+            .await
     } else {
-        "Unable to parse mode".to_string()
-    };
-
-    msg.channel_id
-        .send_tmp(ctx, |m: &mut MessageCreator| m.title("Embed Mode").content(content))
-        .await
+        msg.channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error()
+                    .title("Embed Mode")
+                    .content("Invalid mode specified.\n**Valid Modes**\n`0` - Never\n`1` - Detect\n`2` - Always")
+            })
+            .await
+    }
 }
 
 #[command]

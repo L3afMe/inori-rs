@@ -65,7 +65,14 @@ async fn setup(ctx: &Context, msg: &Message) -> CommandResult {
     settings.sb_emotes = ids;
     save_settings(&settings);
 
-    Ok(())
+    drop(settings);
+    drop(data);
+
+    msg.channel_id
+        .send_tmp(ctx, |m: &mut MessageCreator| {
+            m.success().title("Setup").content("Successfully created emote support server")
+        })
+        .await
 }
 
 #[command]
@@ -296,8 +303,7 @@ async fn serverinfo(ctx: &Context, msg: &Message) -> CommandResult {
 
     let cached_guild = msg.guild_id.unwrap().to_guild_cached(&ctx.cache).await.unwrap();
 
-    // let owner: User =
-    // cached_guild.owner_id.to_user(&ctx).await?;
+    let owner = cached_guild.owner_id.to_user(&ctx).await?;
 
     let mut animated_emotes = 0;
     let mut regular_emotes = 0;
@@ -308,6 +314,7 @@ async fn serverinfo(ctx: &Context, msg: &Message) -> CommandResult {
             regular_emotes += 1;
         };
     }
+
     let emoji_limit = cached_guild.premium_tier.num() * 50 + 50;
     let emote_string = format!(
         "Regular: {}/{}\nAnimated: {}/{}",
@@ -372,26 +379,16 @@ async fn serverinfo(ctx: &Context, msg: &Message) -> CommandResult {
 
     new_msg
         .update_noret(ctx, |m: &mut MessageCreator| {
-            m.title(&cached_guild.name)
+            m.title("Server Info")
+                .content(format!("**{}**", &cached_guild.name))
                 .thumbnail(&cached_guild.icon_url().unwrap_or_default())
-                .footer_text(format!("ID: {} • Created", cached_guild.id.0));
-
-            //.timestamp(&msg.guild_id.unwrap().created_at());
-
-            // msg.author(|f| {
-            // f.name(format!(
-            // "{}#{} 👑",
-            // owner.name,
-            // format!("{:0>4}", owner.discriminator)
-            // ))
-            // .icon_url(owner.avatar_url().unwrap_or(String::
-            // new()))
-            // });
-
-            m.field("Emotes", emote_string, true)
+                .footer_text(format!("ID: {} | Created", cached_guild.id.0))
+                .timestamp(&msg.guild_id.unwrap().created_at())
+                .field("Emotes", emote_string, true)
                 .field("Channels", channels_text, true)
                 .field("Members", member_string, false)
                 .field("Boosts", boosts_string, true)
+                .field("Owner", owner.tag(), true)
                 .field("Roles", format!("{} roles", cached_guild.roles.len()), true)
         })
         .await
@@ -481,13 +478,21 @@ async fn usages(ctx: &Context, msg: &Message) -> CommandResult {
 #[min_args(1)]
 async fn math(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let expr = args.rest();
-    let res = meval::eval_str(expr).unwrap();
-
-    msg.channel_id
-        .send_tmp(ctx, |m: &mut MessageCreator| {
-            m.title("Math").content(format!("Espression: {}\nResult: {}", expr, res))
-        })
-        .await
+    if let Ok(res) = meval::eval_str(expr) {
+        msg.channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.success()
+                    .title("Math")
+                    .content(format!("Equation: {}\nResult: {}", expr, res))
+            })
+            .await
+    } else {
+        msg.channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error().title("Math").content("Unable to evaluate equation")
+            })
+            .await
+    }
 }
 
 #[command]
@@ -697,7 +702,7 @@ async fn base64(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     };
 
     msg.channel_id
-        .send_tmp(ctx, |m: &mut MessageCreator| m.title("Base64").content(content))
+        .send_tmp(ctx, |m: &mut MessageCreator| m.success().title("Base64").content(content))
         .await
 }
 

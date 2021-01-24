@@ -8,6 +8,7 @@ use serenity::{
 };
 
 use crate::{
+    parse_arg,
     utils::{
         chat::{get_user, is_user},
         consts,
@@ -225,7 +226,9 @@ async fn hypesquad(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             if status == 204 {
                 msg.channel_id
                     .send_tmp(ctx, |m: &mut MessageCreator| {
-                        m.title("Hype Squad Changer").content(format!("Set house to {}", house))
+                        m.success()
+                            .title("Hype Squad Changer")
+                            .content(format!("Set house to {}", house))
                     })
                     .await
             } else {
@@ -387,5 +390,50 @@ async fn color(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                     true,
                 )
         })
+        .await
+}
+
+#[command]
+#[aliases("spam")]
+#[description(
+    "Send a message a set amount of times. Delay is in milliseconds.\nWARNING: THIS CANNOT BE STOPPED WITHOUT FORCE \
+     STOPPING THE BOT"
+)]
+#[usage("<amount> <delay> <message>")]
+#[example("50 500 Inori is best waifu")]
+#[min_args(3)]
+async fn spammer(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let amount = parse_arg!(ctx, msg, args, "amount", u64);
+    let delay = parse_arg!(ctx, msg, args, "delay", u64);
+    let message = args.rest();
+
+    let mut count = 0;
+    for _ in 0..amount {
+        if msg.channel_id.say(&ctx.http, message).await.is_ok() {
+            count += 1;
+        }
+        tokio::time::delay_for(tokio::time::Duration::from_millis(delay)).await;
+    }
+
+    msg.channel_id
+        .send_tmp(ctx, |m: &mut MessageCreator| {
+            m.success()
+                .title("Spammer")
+                .content(format!("Successfully send {} messages", count))
+        })
+        .await
+}
+
+#[command]
+#[description("A test command for development, if this is in a release build please let me know.")]
+async fn test(ctx: &Context, msg: &Message) -> CommandResult {
+    let content;
+
+    let current_user = ctx.cache.current_user().await;
+
+    content = format!("{:?}", current_user);
+
+    msg.channel_id
+        .send_tmp(ctx, |m: &mut MessageCreator| m.title("Test").content(content))
         .await
 }

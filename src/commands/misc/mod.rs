@@ -4,6 +4,6 @@ use general::*;
 use serenity::framework::standard::macros::group;
 
 #[group]
-#[commands(about, color, avatar, ratelimits, poll, hypesquad)]
+#[commands(about, avatar, color, hypesquad, poll, ratelimits, spammer)]
 #[description("**Miscellaneous**")]
 struct Miscellaneous;

@@ -125,6 +125,7 @@ pub struct MessageCreator<'a> {
     image:       Option<String>,
     attachment:  Option<AttachmentType<'a>>,
     thumbnail:   Option<String>,
+    timestamp:   Option<String>,
     fields:      Vec<MessageField>,
     footer_text: Option<String>,
     colour:      Option<Colour>,
@@ -139,6 +140,7 @@ impl<'a> Default for MessageCreator<'a> {
             image:       None,
             attachment:  None,
             thumbnail:   None,
+            timestamp:   None,
             fields:      Vec::new(),
             footer_text: None,
             colour:      None,
@@ -268,6 +270,10 @@ impl<'a> MessageCreator<'a> {
                 e.thumbnail(thumbname);
             }
 
+            if let Some(timestamp) = &self.timestamp {
+                e.timestamp(timestamp.as_str());
+            }
+
             for field in &self.fields {
                 e.field(field.title.clone(), field.content.clone(), field.inline);
             }
@@ -350,6 +356,12 @@ impl<'a> MessageCreator<'a> {
 
     pub fn thumbnail<D: ToString>(&mut self, url: D) -> &mut Self {
         self.thumbnail = Some(url.to_string());
+
+        self
+    }
+
+    pub fn timestamp<D: ToString>(&mut self, timestamp: D) -> &mut Self {
+        self.timestamp = Some(timestamp.to_string());
 
         self
     }

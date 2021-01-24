@@ -141,7 +141,7 @@ async fn urbandictionary(ctx: &Context, msg: &Message, args: Args) -> CommandRes
     return if results.is_empty() {
         msg.channel_id
             .send_tmp(ctx, |m: &mut MessageCreator| {
-                m.title("Urban Dictionary").content("No results found")
+                m.warning().title("Urban Dictionary").content("No results found")
             })
             .await
     } else {
@@ -165,7 +165,8 @@ async fn urbandictionary(ctx: &Context, msg: &Message, args: Args) -> CommandRes
 async fn balance(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id
         .send_tmp(ctx, |m: &mut MessageCreator| {
-            m.title("Balance")
+            m.error()
+                .title("Balance")
                 .content("You a broke ass, don't even bother checking your bal")
         })
         .await

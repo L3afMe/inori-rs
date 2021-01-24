@@ -69,7 +69,7 @@ async fn actor(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         return msg
             .channel_id
             .send_tmp(ctx, |m: &mut MessageCreator| {
-                m.error()
+                m.warning()
                     .title("MyAnimeList")
                     .content(&format!("No results found for query: `{}`", params))
             })
@@ -135,7 +135,7 @@ async fn character(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         return msg
             .channel_id
             .send_tmp(ctx, |m: &mut MessageCreator| {
-                m.error()
+                m.warning()
                     .title("MyAnimeList")
                     .content(&format!("No results found for query: `{}`", params))
             })
@@ -221,7 +221,7 @@ async fn manga(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         return msg
             .channel_id
             .send_tmp(ctx, |m: &mut MessageCreator| {
-                m.error()
+                m.warning()
                     .title("MyAnimeList")
                     .content(&format!("No results found for query: `{}`", params))
             })
@@ -289,7 +289,7 @@ async fn anime(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         return msg
             .channel_id
             .send_tmp(ctx, |m: &mut MessageCreator| {
-                m.error()
+                m.warning()
                     .title("MyAnimeList")
                     .content(&format!("No results found for query: `{}`", params))
             })

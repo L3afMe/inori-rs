@@ -33,9 +33,7 @@ where
         return msg
             .channel_id
             .send_tmp(ctx, |m: &mut MessageCreator| {
-                m.error()
-                    .title("Purge")
-                    .content(":no_entry_sign: The value provided is not a valid number")
+                m.error().title("Purge").content("The value provided is not a valid number")
             })
             .await;
     };
@@ -51,7 +49,7 @@ where
         return msg
             .channel_id
             .send_tmp(ctx, |m: &mut MessageCreator| {
-                m.error().title("Purge").content(":no_entry_sign: Unable to parse regex")
+                m.error().title("Purge").content("Unable to parse regex")
             })
             .await;
     };
@@ -97,8 +95,7 @@ where
 
     return loading_msg
         .update_tmp(ctx, |m: &mut MessageCreator| {
-            m.title(title)
-                .content(format!(":white_check_mark: Deleted {} {}", purge_count, end))
+            m.success().title(title).content(format!("Deleted {} {}", purge_count, end))
         })
         .await;
 }

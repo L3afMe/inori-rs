@@ -4,7 +4,7 @@ use serenity::{
     prelude::Context,
 };
 
-use crate::{save_settings, InoriChannelUtils, MessageCreator, Settings};
+use crate::{parse_arg, save_settings, InoriChannelUtils, MessageCreator, Settings};
 
 #[command]
 #[aliases("ad")]
@@ -43,7 +43,7 @@ async fn toggle(ctx: &Context, msg: &Message) -> CommandResult {
     drop(data);
 
     msg.channel_id
-        .send_tmp(ctx, |m: &mut MessageCreator| m.title("Auto Delete").content(content))
+        .send_tmp(ctx, |m: &mut MessageCreator| m.success().title("Auto Delete").content(content))
         .await
 }
 
@@ -53,21 +53,28 @@ async fn enable(ctx: &Context, msg: &Message) -> CommandResult {
     let data = ctx.data.write().await;
     let mut settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
 
-    let content = if settings.autodelete.enabled {
-        "Already enabled"
+    if settings.autodelete.enabled {
+        drop(settings);
+        drop(data);
+
+        msg.channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.info().title("Auto Delete").content("Already enabled")
+            })
+            .await
     } else {
         settings.autodelete.enabled = true;
         save_settings(&settings);
 
-        "Enabled"
-    };
+        drop(settings);
+        drop(data);
 
-    drop(settings);
-    drop(data);
-
-    msg.channel_id
-        .send_tmp(ctx, |m: &mut MessageCreator| m.title("Auto Delete").content(content))
-        .await
+        msg.channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.success().title("Auto Delete").content("Enabled")
+            })
+            .await
+    }
 }
 
 #[command]
@@ -76,57 +83,70 @@ async fn disable(ctx: &Context, msg: &Message) -> CommandResult {
     let data = ctx.data.write().await;
     let mut settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
 
-    let content = if settings.autodelete.enabled {
+    if settings.autodelete.enabled {
         settings.autodelete.enabled = false;
         save_settings(&settings);
 
-        "Disabled"
+        drop(settings);
+        drop(data);
+
+        msg.channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.success().title("Auto Delete").content("Disabled")
+            })
+            .await
     } else {
-        "Already disabled"
-    };
+        drop(settings);
+        drop(data);
 
-    drop(settings);
-    drop(data);
-
-    msg.channel_id
-        .send_tmp(ctx, |m: &mut MessageCreator| m.title("Auto Delete").content(content))
-        .await
+        msg.channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.info().title("Auto Delete").content("Already disabled")
+            })
+            .await
+    }
 }
 
 #[command]
 #[description("Get or set the delay before messages are deleted")]
 #[usage("<seconds>")]
 #[example("10")]
-async fn delay(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    let arg = if args.is_empty() {
-        "current"
-    } else {
-        args.current().unwrap()
-    };
+#[max_args(1)]
+async fn delay(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    if args.is_empty() {
+        let data = ctx.data.write().await;
+        let settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
+        let delay = settings.autodelete.delay;
+
+        drop(settings);
+        drop(data);
+
+        return msg
+            .channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.info()
+                    .title("Auto Delete")
+                    .content(format!("Delay currently set to {} seconds", delay))
+            })
+            .await;
+    }
+
+    let delay = parse_arg!(ctx, msg, args, "delay", u64);
 
     let data = ctx.data.write().await;
     let mut settings = data.get::<Settings>().expect("Expected Setting in TypeMap.").lock().await;
 
-    let content = if arg.to_lowercase().eq("current") {
-        format!("Delay currently set to {} seconds", settings.autodelete.delay)
-    } else if let Ok(delay) = arg.parse::<u64>() {
-        settings.autodelete.delay = delay;
-        save_settings(&settings);
-
-        format!("Delay set to {} seconds", delay)
-    } else {
-        return msg
-            .channel_id
-            .send_tmp(ctx, |m: &mut MessageCreator| {
-                m.error().title("Auto Delete").content("Unable to parse delay to number")
-            })
-            .await;
-    };
+    settings.autodelete.delay = delay;
+    save_settings(&settings);
 
     drop(settings);
     drop(data);
 
     msg.channel_id
-        .send_tmp(ctx, |m: &mut MessageCreator| m.title("Auto Delete").content(content))
+        .send_tmp(ctx, |m: &mut MessageCreator| {
+            m.success()
+                .title("Auto Delete")
+                .content(format!("Delay set to {} seconds", delay))
+        })
         .await
 }

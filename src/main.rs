@@ -1,6 +1,7 @@
 #![feature(async_closure)]
 mod commands;
 mod events;
+mod macros;
 mod models;
 mod settings;
 mod utils;
