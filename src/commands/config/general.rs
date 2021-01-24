@@ -157,19 +157,3 @@ async fn embedmode(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
             .await
     }
 }
-
-#[command]
-#[description("Edit giveaway joiner configuration")]
-#[usage("<subcommand>")]
-#[example("delay 120")]
-#[example("winmessage Hey, I won the giveway but I'm out rn. Can I redeem it when I get home?")]
-#[min_args(1)]
-async fn giveaway(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    msg.channel_id
-        .send_tmp(ctx, |m: &mut MessageCreator| {
-            m.error()
-                .title("Giveaway")
-                .title(&format!("Unknown subcommand: {}", args.current().unwrap()))
-        })
-        .await
-}

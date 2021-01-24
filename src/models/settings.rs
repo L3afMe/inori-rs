@@ -14,7 +14,13 @@ pub struct PfpSwitcher {
 #[derive(Default, Serialize, Deserialize, Clone)]
 pub struct GiveawayConfig {
     pub enabled: bool,
-    pub delay:   u64,
+    pub min_delay: u64,
+    pub max_delay: u64,
+    pub mode: u8,
+    pub whitelisted_guilds: Vec<u64>,
+    pub blacklisted_guilds: Vec<u64>,
+    pub whitelisted_words: Vec<String>,
+    pub blacklisted_words: Vec<String>,
 }
 
 #[derive(Default, Serialize, Deserialize, Clone)]

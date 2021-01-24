@@ -118,7 +118,7 @@ async fn disable(ctx: &Context, msg: &Message) -> CommandResult {
 
 #[command]
 #[aliases("m")]
-#[description("Set the mode of which pictures get chosen\n**Modes**\n0 - Random order\n1 - Alphabetical order")]
+#[description("Set the mode in which pictures get chosen\n**Modes**\n0 - Random order\n1 - Alphabetical order")]
 #[usage("<mode>")]
 #[example("1")]
 #[num_args(1)]

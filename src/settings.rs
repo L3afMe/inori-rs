@@ -372,21 +372,44 @@ pub async fn setup_settings(settings: &toml::map::Map<String, toml::Value>) -> S
         giveaway.get("enabled").unwrap().as_bool().unwrap()
     };
 
-    let giveaway_delay: u64 = if giveaway_enabled {
-        if !giveaway.contains_key("delay") || !giveaway.get("delay").unwrap().is_integer() {
-            get_valid_input("the delay in seconds before joining a giveaway.", async move |input: String| {
-                match input.parse::<u64>() {
-                    Ok(op) => Some(op),
-                    Err(_) => None,
-                }
-            })
+    let giveaway_min_delay: u64 = if giveaway_enabled {
+        if !giveaway.contains_key("min_delay") || !giveaway.get("min_delay").unwrap().is_integer() {
+            get_valid_input(
+                "the min delay in seconds before joining a giveaway.",
+                async move |input: String| {
+                    match input.parse::<u64>() {
+                        Ok(op) => Some(op),
+                        Err(_) => None,
+                    }
+                },
+            )
             .await
-            .unwrap_or(20)
+            .unwrap_or(120)
         } else {
-            giveaway.get("delay").unwrap().as_integer().unwrap() as u64
+            giveaway.get("min_delay").unwrap().as_integer().unwrap() as u64
         }
     } else {
         120
+    };
+
+    let giveaway_max_delay: u64 = if giveaway_enabled {
+        if !giveaway.contains_key("max_delay") || !giveaway.get("max_delay").unwrap().is_integer() {
+            get_valid_input(
+                "the max delay in seconds before joining a giveaway.",
+                async move |input: String| {
+                    match input.parse::<u64>() {
+                        Ok(op) => Some(op),
+                        Err(_) => None,
+                    }
+                },
+            )
+            .await
+            .unwrap_or(180)
+        } else {
+            giveaway.get("max_delay").unwrap().as_integer().unwrap() as u64
+        }
+    } else {
+        180
     };
 
     let autodelete = if settings.contains_key("autodelete") && settings.get("autodelete").unwrap().is_table() {
@@ -447,9 +470,71 @@ pub async fn setup_settings(settings: &toml::map::Map<String, toml::Value>) -> S
         mode:    pfp_switcher_mode,
     };
 
+    let whitelisted_guilds =
+        if giveaway.contains_key("whitelisted_guilds") && giveaway.get("whitelisted_guilds").unwrap().is_array() {
+            let list = giveaway.get("whitelisted_guilds").unwrap().as_array().unwrap().clone();
+            list.into_iter()
+                .filter(|e| e.is_integer())
+                .map(|e| e.as_integer().unwrap() as u64)
+                .collect::<Vec<u64>>()
+        } else {
+            Vec::new()
+        };
+
+    let blacklisted_guilds =
+        if giveaway.contains_key("blacklisted_guilds") && giveaway.get("blacklisted_guilds").unwrap().is_array() {
+            let list = giveaway.get("blacklisted_guilds").unwrap().as_array().unwrap().clone();
+            list.into_iter()
+                .filter(|e| e.is_integer())
+                .map(|e| e.as_integer().unwrap() as u64)
+                .collect::<Vec<u64>>()
+        } else {
+            Vec::new()
+        };
+
+    let whitelisted_words =
+        if giveaway.contains_key("whitelisted_words") && giveaway.get("whitelisted_words").unwrap().is_array() {
+            let list = giveaway.get("whitelisted_words").unwrap().as_array().unwrap().clone();
+            list.into_iter()
+                .filter(|e| e.is_str())
+                .map(|e| e.as_str().unwrap().to_string())
+                .collect::<Vec<String>>()
+        } else {
+            Vec::new()
+        };
+
+    let blacklisted_words =
+        if giveaway.contains_key("blacklisted_words") && giveaway.get("blacklisted_words").unwrap().is_array() {
+            let list = giveaway.get("blacklisted_words").unwrap().as_array().unwrap().clone();
+            list.into_iter()
+                .filter(|e| e.is_str())
+                .map(|e| e.as_str().unwrap().to_string())
+                .collect::<Vec<String>>()
+        } else {
+            vec![
+                " sb".to_string(),
+                "sb ".to_string(),
+                "selfbot".to_string(),
+                "bot".to_string(),
+                "fake".to_string(),
+            ]
+        };
+
+    let mode = if giveaway.contains_key("mode") && giveaway.get("mode").unwrap().is_integer() {
+        giveaway.get("mode").unwrap().as_integer().unwrap() as u8
+    } else {
+        0
+    };
+
     let giveaway: GiveawayConfig = GiveawayConfig {
         enabled: giveaway_enabled,
-        delay:   giveaway_delay,
+        min_delay: giveaway_min_delay,
+        max_delay: giveaway_max_delay,
+        mode,
+        whitelisted_guilds,
+        blacklisted_guilds,
+        whitelisted_words,
+        blacklisted_words,
     };
 
     let whitelisted_guilds =

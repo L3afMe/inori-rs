@@ -1,5 +1,6 @@
 use colored::Colorize;
 use once_cell::sync::Lazy;
+use rand::Rng;
 use regex::Regex;
 use reqwest::StatusCode;
 use serenity::{
@@ -199,6 +200,7 @@ pub async fn normal_message(ctx: &Context, msg: &Message) {
             .content
             .to_string()
             .eq("<:yay:585696613507399692>   **GIVEAWAY**   <:yay:585696613507399692>")
+        && msg.embeds.len() == 1
     {
         let config = {
             let data = ctx.data.read().await;
@@ -209,6 +211,34 @@ pub async fn normal_message(ctx: &Context, msg: &Message) {
         if !config.enabled || msg.is_private() {
             return;
         }
+
+        let guild_id = msg.guild_id.unwrap();
+        let embed = msg.embeds.get(0).unwrap();
+        let prize = embed.clone().author.unwrap().name;
+
+
+        let is_whitelisted = config.whitelisted_words.is_empty()
+            || config
+                .whitelisted_words
+                .into_iter()
+                .filter(|w| prize.to_lowercase().contains(&w.to_lowercase()))
+                .count()
+                != 0;
+        let is_blacklisted = config
+            .blacklisted_words
+            .into_iter()
+            .filter(|w| prize.to_lowercase().contains(&w.to_lowercase()))
+            .count()
+            != 0;
+
+        if (config.mode == 1 && !config.whitelisted_guilds.contains(&guild_id.0))
+            || (config.mode == 2 && config.blacklisted_guilds.contains(&guild_id.0))
+            || is_blacklisted
+            || !is_whitelisted
+        {
+            return;
+        }
+
 
         let channel_name = match ctx.http.get_channel(msg.channel_id.0).await.unwrap() {
             Channel::Guild(channel) => channel.name,
@@ -224,15 +254,23 @@ pub async fn normal_message(ctx: &Context, msg: &Message) {
             .await
             .unwrap_or_else(|| "Unknown".to_string());
 
+        let min = std::cmp::min(config.min_delay, config.max_delay);
+        let max = std::cmp::max(config.min_delay, config.max_delay);
+        let delay = if min == max {
+            min
+        } else {
+            rand::thread_rng().gen_range(min..max)
+        };
+
         inori_info!(
             "Giveaway",
             "Detected giveaway in [{} > {}] waiting {} seconds",
             guild_name,
             channel_name,
-            config.delay,
+            delay,
         );
 
-        tokio::time::delay_for(tokio::time::Duration::from_secs(config.delay)).await;
+        tokio::time::delay_for(tokio::time::Duration::from_secs(delay)).await;
         msg.react(&ctx.http, ReactionType::Unicode("🎉".to_string())).await.unwrap();
         inori_info!("Giveaway", "Joined giveaway");
     }
