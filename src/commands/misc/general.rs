@@ -419,21 +419,7 @@ async fn spammer(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
         .send_tmp(ctx, |m: &mut MessageCreator| {
             m.success()
                 .title("Spammer")
-                .content(format!("Successfully send {} messages", count))
+                .content(format!("Successfully sent {} messages", count))
         })
-        .await
-}
-
-#[command]
-#[description("A test command for development, if this is in a release build please let me know.")]
-async fn test(ctx: &Context, msg: &Message) -> CommandResult {
-    let content;
-
-    let current_user = ctx.cache.current_user().await;
-
-    content = format!("{:?}", current_user);
-
-    msg.channel_id
-        .send_tmp(ctx, |m: &mut MessageCreator| m.title("Test").content(content))
         .await
 }
