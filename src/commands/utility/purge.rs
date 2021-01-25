@@ -112,7 +112,7 @@ where
 #[min_args(1)]
 async fn embeds(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     _purge(ctx, msg, "Purge", args, async move |message: Message| {
-        message.is_own(&ctx.cache).await && !message.embeds.is_empty()
+        message.author.id == ctx.http.get_current_user().await.unwrap().id && !message.embeds.is_empty()
     })
     .await
 }
@@ -131,7 +131,7 @@ async fn embeds(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[sub_commands(embeds)]
 async fn purge(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     _purge(ctx, msg, "Purge", args, async move |message: Message| {
-        message.is_own(&ctx.cache).await
+        message.author.id == ctx.http.get_current_user().await.unwrap().id
     })
     .await
 }
