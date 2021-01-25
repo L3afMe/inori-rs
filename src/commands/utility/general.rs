@@ -89,9 +89,8 @@ async fn userinfo(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let arg = args.rest().to_lowercase();
 
     if !is_user(&arg) {
-        return msg
-            .channel_id
-            .send_tmp(ctx, |m: &mut MessageCreator| {
+        return new_msg
+            .update_tmp(ctx, |m: &mut MessageCreator| {
                 m.error().title("User Info").content("Could not parse user ID")
             })
             .await;
@@ -100,9 +99,8 @@ async fn userinfo(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let user = if let Ok(user) = get_user(&arg).parse::<u64>() {
         user
     } else {
-        return msg
-            .channel_id
-            .send_tmp(ctx, |m: &mut MessageCreator| {
+        return new_msg
+            .update_tmp(ctx, |m: &mut MessageCreator| {
                 m.error().title("User Info").content("Could not parse user ID")
             })
             .await;
@@ -111,9 +109,8 @@ async fn userinfo(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let user = if let Ok(user) = ctx.http.get_user(user).await {
         user
     } else {
-        return msg
-            .channel_id
-            .send_tmp(ctx, |m: &mut MessageCreator| {
+        return new_msg
+            .update_tmp(ctx, |m: &mut MessageCreator| {
                 m.error().title("User Info").content("Couldn't get user")
             })
             .await;
@@ -303,12 +300,19 @@ async fn serverinfo(ctx: &Context, msg: &Message) -> CommandResult {
 
     let cached_guild = msg.guild_id.unwrap().to_guild_cached(&ctx.cache).await.unwrap();
 
-    let owner = cached_guild.owner_id.to_user(&ctx).await?;
+    let owner = cached_guild.owner_id.to_user(&ctx.http).await?;
+
+    let emotes = {
+        let data = ctx.data.read().await;
+        let settings = data.get::<Settings>().expect("Expected Settings in TypeMap.").lock().await;
+
+        settings.sb_emotes.clone()
+    };
 
     let mut animated_emotes = 0;
     let mut regular_emotes = 0;
-    for emoji in &cached_guild.emojis {
-        if emoji.1.animated {
+    for emote in &cached_guild.emojis {
+        if emote.1.animated {
             animated_emotes += 1;
         } else {
             regular_emotes += 1;
@@ -333,8 +337,11 @@ async fn serverinfo(ctx: &Context, msg: &Message) -> CommandResult {
         }
     }
     let channels_text = format!(
-        "<:text_channel:797147634284101693> {}\n<:voice_channel:797147798209429535> {}",
-        text_channels, voice_channels
+        "<:text_channel:{}> {}\n<:voice_channel:{}> {}",
+        emotes.get("text_channel").unwrap_or(&0),
+        text_channels,
+        emotes.get("voice_channel").unwrap_or(&0),
+        voice_channels
     );
 
     let mut bot_count = 0;
@@ -367,12 +374,23 @@ async fn serverinfo(ctx: &Context, msg: &Message) -> CommandResult {
 
     let member_count = bot_count + human_count;
     let member_string = format!(
-        "<:status_online:797127703752081408> {} • <:status_idle:797127751764410408> {} • \
-         <:status_dnd:797127797415084063> {} • <:status_offline:797127842235678731> {}\n{} humans \n{} bots\n{} total",
-        online_count, idle_count, dnd_count, offline_count, human_count, bot_count, member_count
+        "<:status_online:{}> {} • <:status_idle:{}> {} • <:status_dnd:{}> {} • <:status_offline:{}> {}\n{} humans \
+         \n{} bots\n{} total",
+        emotes.get("status_online").unwrap_or(&0),
+        online_count,
+        emotes.get("status_idle").unwrap_or(&0),
+        idle_count,
+        emotes.get("status_dnd").unwrap_or(&0),
+        dnd_count,
+        emotes.get("status_offline").unwrap_or(&0),
+        offline_count,
+        human_count,
+        bot_count,
+        member_count
     );
     let boosts_string = format!(
-        "<:nitro_boost:797148982358048798> {}\nLevel {}",
+        "<:nitro_boost:{}> {}\nLevel {}",
+        emotes.get("nitro_boost").unwrap_or(&0),
         cached_guild.premium_subscription_count,
         cached_guild.premium_tier.num()
     );
@@ -383,13 +401,12 @@ async fn serverinfo(ctx: &Context, msg: &Message) -> CommandResult {
                 .content(format!("**{}**", &cached_guild.name))
                 .thumbnail(&cached_guild.icon_url().unwrap_or_default())
                 .footer_text(format!("ID: {} | Created", cached_guild.id.0))
-                .timestamp(&msg.guild_id.unwrap().created_at())
                 .field("Emotes", emote_string, true)
                 .field("Channels", channels_text, true)
                 .field("Members", member_string, false)
                 .field("Boosts", boosts_string, true)
-                .field("Owner", owner.tag(), true)
                 .field("Roles", format!("{} roles", cached_guild.roles.len()), true)
+                .field("Owner", owner.tag(), true)
         })
         .await
 }
