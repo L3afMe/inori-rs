@@ -49,7 +49,7 @@ pub async fn after(ctx: &Context, msg: &Message, command_name: &str, res: Comman
 
     match res {
         Ok(()) => inori_info!("Command", "Finished running '{}'", command_name),
-        Err(why) => inori_error!("Command", "Finishing running '{}' with error {:?}", command_name, why),
+        Err(why) => inori_error!("Command", "Finishing running '{}' with error {:#?}", command_name, why),
     }
 }
 
