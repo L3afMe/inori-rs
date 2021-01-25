@@ -343,7 +343,7 @@ async fn change(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         .await
         .unwrap();
 
-    let mut user = ctx.cache.current_user().await;
+    let mut user = ctx.http.get_current_user().await.unwrap();
     let avatar = read_image((&path_str).to_string())?;
     user.edit(&ctx.http, |p| p.avatar(Some(&avatar))).await.unwrap();
 
