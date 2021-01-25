@@ -43,8 +43,15 @@ features = ["fs", "io-std", "io-util", "macros", "rt-core", "rt-threaded", "sync
 
 [dependencies.serenity]
 git = "https://github.com/L3afMe/serenity-selfbot-support"
+default-features = false
 features = [
+    "builder",
+    "client",
     "framework",
+    "gateway",
+    "http",
+    "model",
     "standard_framework",
+    "utils",
     "rustls_backend",
 ]
