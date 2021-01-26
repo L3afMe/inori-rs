@@ -1,0 +1,10 @@
+version: 2
+updates:
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    ignore:
+      - dependency-name: "tokio"
+      - dependency-name: "serenity"
+      - dependency-name: "serenity-utils"
