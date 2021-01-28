@@ -211,6 +211,10 @@ impl<'a> MessageCreator<'a> {
     pub fn to_embed(&self, emotes: HashMap<String, u64>) -> CreateMessage {
         let mut message = CreateMessage::default();
 
+        if let Some(file) = &self.attachment {
+            message.2.push(file.clone());
+        }
+
         message.embed(|e: &mut CreateEmbed| {
             if let Some(colour) = self.colour {
                 e.colour(colour);
@@ -348,7 +352,8 @@ impl<'a> MessageCreator<'a> {
         self
     }
 
-    pub fn attachment<T: Into<AttachmentType<'a>>>(&mut self, attachment: T) -> &mut Self {
+    pub fn attachment<D: ToString, T: Into<AttachmentType<'a>>>(&mut self, file_name: D, attachment: T) -> &mut Self {
+        self.image = Some(format!("attachment://{}", file_name.to_string()));
         self.attachment = Some(attachment.into());
 
         self

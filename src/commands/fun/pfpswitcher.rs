@@ -4,6 +4,7 @@ use std::{
 };
 
 use colored::Colorize;
+use once_cell::sync::Lazy;
 use serenity::{
     framework::standard::{macros::command, Args, CommandResult},
     http::AttachmentType,
@@ -233,33 +234,41 @@ async fn delay(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     }
 }
 
+static JPEG_BYTES: Lazy<Vec<u8>> = Lazy::new(|| vec![255, 216, 255, 224]);
+static PNG_BYTES: Lazy<Vec<u8>> = Lazy::new(|| vec![137, 80, 78, 71]);
+static WEBP_BYTES: Lazy<Vec<u8>> = Lazy::new(|| vec![82, 73, 70, 70]);
+
 #[command]
 #[aliases("add", "a")]
-#[description("Add a new profile pic with a specific name. File name cannot contain spaces")]
-#[usage("<file name>")]
-#[example("rias.png")]
-#[num_args(1)]
-async fn add(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    if msg.attachments.len() != 1 {
+#[description(
+    "Add a new profile pic with a specific name. File name cannot contain spaces. Currently only supports JPEG, PNG \
+     and WEBP"
+)]
+#[usage("<file name> [url]")]
+#[example("rias")]
+#[example("inori https://i.imgur.com/43huWfw.png")]
+#[min_args(1)]
+#[max_args(2)]
+async fn add(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    if args.len() == 1 && msg.attachments.len() != 1 {
         return msg
             .channel_id
             .send_tmp(ctx, |m: &mut MessageCreator| {
                 m.error()
                     .title("Profile Picture Switcher")
-                    .content("**1 image** attached is required to add a new profile picture")
+                    .content("1 image attached or a link to an image is required to add a new profile picture")
             })
             .await;
     }
 
-    let mut file_name = args.current().unwrap().to_string();
-    let atch = msg.attachments.get(0).unwrap();
-    let atch_url = &atch.url;
-    let url = atch_url.split('?').next().unwrap().to_string();
-    let ext = &url.to_string()[url.rfind('.').unwrap()..];
-
-    if !file_name.ends_with(ext) {
-        file_name = format!("{}{}", file_name, ext);
-    }
+    let mut file_name = args.single::<String>().unwrap();
+    let url = if args.len() == 1 {
+        let atch = msg.attachments.get(0).unwrap();
+        let atch_url = &atch.url;
+        atch_url.split('?').next().unwrap().to_string()
+    } else {
+        args.single::<String>().unwrap()
+    };
 
     if !Path::new("./pfps/").exists() && create_dir("pfps").is_err() {
         return msg
@@ -289,7 +298,48 @@ async fn add(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         .await
         .unwrap();
 
-    let img = reqwest::get(atch_url).await?.bytes().await?;
+    let response = if let Ok(response) = reqwest::get(&url).await {
+        response
+    } else {
+        return new_msg
+            .update_tmp(ctx, |m: &mut MessageCreator| {
+                m.error().title("Profile Picture Switcher").content("Unable to download image")
+            })
+            .await;
+    };
+
+    let img = if let Ok(bytes) = response.bytes().await {
+        bytes
+    } else {
+        return new_msg
+            .update_tmp(ctx, |m: &mut MessageCreator| {
+                m.error()
+                    .title("Profile Picture Switcher")
+                    .content("Unable to convert image to bytes")
+            })
+            .await;
+    };
+
+    let bytes = img.clone()[0..4].to_vec();
+    println!("Bytes: {:?}", bytes);
+
+    let ext = if JPEG_BYTES.eq(&bytes) {
+        "jpg"
+    } else if PNG_BYTES.eq(&bytes) {
+        "png"
+    } else if WEBP_BYTES.eq(&bytes) {
+        "webp"
+    } else {
+        return new_msg
+            .update_tmp(ctx, |m: &mut MessageCreator| {
+                m.error()
+                    .title("Profile Picture Switcher")
+                    .content("Link provided is not a valid image")
+            })
+            .await;
+    };
+
+    file_name = format!("{}.{}", file_name, ext);
     let mut file = File::create(format!("./pfps/{}", file_name)).await.unwrap();
     file.write_all(&img).await?;
 
@@ -297,7 +347,7 @@ async fn add(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         .update_tmp(ctx, |m: &mut MessageCreator| {
             m.success()
                 .title("Profile Picture Switcher")
-                .image(atch_url)
+                .image(url)
                 .content(format!("Successfully added '{}'", file_name))
         })
         .await
@@ -309,8 +359,8 @@ async fn add(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[usage("<file name>")]
 #[example("rias.png")]
 #[num_args(1)]
-async fn change(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    let img_str = args.current().unwrap().to_string();
+async fn change(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let img_str = args.single::<String>().unwrap();
 
     if img_str.contains("../") || img_str.contains("//") {
         return msg
@@ -441,16 +491,37 @@ async fn view(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
     let img = File::open(path_str).await.unwrap();
 
-    msg.channel_id
-        .send_tmp(ctx, |m: &mut MessageCreator| {
-            m.title("Profile Picture Switcher")
-                .content(img_str.clone())
-                .attachment(AttachmentType::File {
-                    file:     &img,
-                    filename: img_str.clone(),
-                })
+    // Temp fix while I figure out why
+    // MessageCreator.attachment doesn't work
+    let _ = msg
+        .channel_id
+        .send_message(&ctx, |m| {
+            m.add_file(AttachmentType::File {
+                file:     &img,
+                filename: img_str.clone(),
+            });
+
+            m.embed(|e| {
+                e.title("[Profile Picture Switcher]")
+                    .color(serenity::utils::Color::FABLED_PINK)
+                    .description(format!("{} (Temporary fix)", img_str))
+                    .attachment(img_str)
+            })
         })
-        .await
+        .await;
+
+    Ok(())
+
+    // msg.channel_id
+    // .send_tmp(ctx, |m: &mut MessageCreator| {
+    // m.title("Profile Picture Switcher")
+    // .content(img_str.clone())
+    // .attachment(&img_str, AttachmentType::File
+    // { file:     &img,
+    // filename: img_str.clone(),
+    // })
+    // })
+    // .await
 }
 
 #[command]
@@ -459,8 +530,11 @@ async fn view(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 async fn list(ctx: &Context, msg: &Message) -> CommandResult {
     let mut list = "".to_string();
 
-    let dir_list: Vec<Result<std::fs::DirEntry, std::io::Error>> =
-        Path::new("./pfps/").read_dir().expect("Unable to execute read_dir").collect();
+    let dir_list: Vec<Result<std::fs::DirEntry, std::io::Error>> = if let Ok(path) = Path::new("./pfps/").read_dir() {
+        path.collect()
+    } else {
+        Vec::new()
+    };
 
     if dir_list.is_empty() {
         list = "Nothing to see here".to_string();
