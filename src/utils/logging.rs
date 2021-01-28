@@ -1,4 +1,8 @@
-use std::io::{Read, Write};
+use std::{
+    fs::create_dir,
+    io::{Read, Write},
+    path::Path,
+};
 
 use colored::Colorize;
 use fern::{Dispatch, InitError};
@@ -19,17 +23,40 @@ pub fn setup_logger() -> Result<(), InitError> {
         colored::control::set_override(false);
     }
 
-    Dispatch::new()
+    let log = Dispatch::new()
         .format(move |out, message, _record| {
             out.finish(format_args!("[{}]{}", chrono::Local::now().format("%H:%M:%S"), message))
         })
         .level_for("serenity", LevelFilter::Off)
         .level_for("tracing::span", LevelFilter::Off)
         .level(LevelFilter::Info)
-        .chain(std::io::stdout())
-        .apply()?;
+        .chain(std::io::stdout());
 
-    inori_success!("Log", "Successfully setup logger");
+    let logs_path = Path::new(".").join("logs");
+    if !logs_path.exists() {
+        if let Err(why) = create_dir(logs_path.clone()) {
+            println!("[WARNING] Unable to create log directory\n[ERROR] {:?}", why);
+
+            log.apply()?;
+            inori_success!("Log", "Successfully setup logger without log saving");
+            return Ok(());
+        }
+    }
+
+    let now = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
+    let log_path = logs_path.join(format!("inori-rs_{}.log", now));
+
+    match fern::log_file(log_path) {
+        Ok(file) => {
+            log.chain(file).apply()?;
+            inori_success!("Log", "Successfully setup logger");
+        },
+        Err(why) => {
+            println!("[WARNING] Unable to create log file!\n[ERROR] {:?}", why);
+            log.apply()?;
+            inori_success!("Log", "Successfully setup logger without log saving");
+        },
+    };
 
     Ok(())
 }
