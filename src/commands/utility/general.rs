@@ -768,13 +768,14 @@ async fn checktoken(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 }
 
                 let mut content = format!(
-                    "Tag: {}#{} {}\nID: {}\nEmail: {}\nPhone: {}\n2FA: {}\nNitro: {}",
+                    "Tag: {}#{} {}\nID: {}\nEmail: {}\nPhone: {}\nVerified: {}\n2FA: {}\nNitro: {}",
                     user.username,
                     user.discriminator,
                     bot_tag,
                     user.id,
                     user.email,
                     user.phone.clone().unwrap_or_else(|| "Not set".to_string()),
+                    user.verified.to_string(),
                     if user.mfa_enabled { "Enabled" } else { "Disabled" },
                     user.nitro_str(),
                 );

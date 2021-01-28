@@ -396,11 +396,11 @@ async fn color(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[command]
 #[aliases("spam")]
 #[description(
-    "Send a message a set amount of times. Delay is in milliseconds.\nWARNING: THIS CANNOT BE STOPPED WITHOUT FORCE \
-     STOPPING THE BOT"
+    "Send a message a set amount of times. Delay is in milliseconds.\nTo avoid ratelimit a minimum of 625ms should be \
+     specified but you can go as low as you like.\nWARNING: THIS CANNOT BE STOPPED WITHOUT FORCE STOPPING THE BOT"
 )]
 #[usage("<amount> <delay> <message>")]
-#[example("50 500 Inori is best waifu")]
+#[example("50 625 Inori is best waifu")]
 #[min_args(3)]
 async fn spammer(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let amount = parse_arg!(ctx, msg, args, "amount", u64);

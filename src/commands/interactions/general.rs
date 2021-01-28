@@ -19,7 +19,7 @@ use crate::{
 static RESPONSES: Lazy<HashMap<String, Vec<String>>> = Lazy::new(|| {
     let mut map = HashMap::new();
 
-    map.insert("anal".to_string(), vec!["{0} gave clapped {1}'s cheeks".to_string()]);
+    map.insert("anal".to_string(), vec!["{0} dug their dick into {1}".to_string()]);
     map.insert("cuddle".to_string(), vec!["{0} snuggled up to {1}".to_string()]);
     map.insert("blowjob".to_string(), vec!["{0} gave {1} some sloppy top".to_string()]);
     map.insert("pat".to_string(), vec!["{0} petted {1}".to_string()]);
