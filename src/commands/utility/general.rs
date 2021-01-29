@@ -10,9 +10,11 @@ use serenity::{
         channel::{ChannelType, Message},
         guild::Role,
         id::RoleId,
+        permissions::Permissions,
         prelude::OnlineStatus,
     },
     prelude::Context,
+    utils::Colour,
 };
 use urlencoding::encode;
 
@@ -24,6 +26,7 @@ use crate::{
     save_settings,
     utils::{
         chat::{get_user, is_user},
+        discord::get_member,
         emotes::EMOTES,
     },
     InoriChannelUtils, InoriMessageUtils, MessageCreator, Settings,
@@ -117,7 +120,7 @@ async fn userinfo(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     };
 
     let member = if !msg.is_private() {
-        if let Ok(member) = ctx.http.get_member(msg.guild_id.unwrap().0, user.id.0).await {
+        if let Ok(member) = get_member(ctx, msg.guild_id.unwrap(), user.id).await {
             Some(member)
         } else {
             None
@@ -126,18 +129,52 @@ async fn userinfo(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         None
     };
 
-    let colour = if let Some(member) = member.clone() {
-        member.colour(&ctx.cache).await
+
+    let roles = if let Some(member) = member.clone() {
+        if let Ok(roles) = ctx.http.get_guild_roles(msg.guild_id.unwrap().0).await {
+            let mut mem_roles = Vec::new();
+
+            let mut itr = roles.into_iter();
+            for role in member.roles {
+                if let Some(role) = itr.find(|r| role.eq(&r.id)) {
+                    mem_roles.push(role.clone());
+                }
+            }
+
+            Some(mem_roles)
+        } else {
+            None
+        }
     } else {
         None
     };
 
-    let perms = if let Some(member) = member.clone() {
-        if let Ok(perms) = member.permissions(&ctx.cache).await {
-            Some(perms)
+    let colour = if let Some(roles) = roles.clone() {
+        Some(
+            roles
+                .into_iter()
+                .map(|r| r.colour)
+                .find(|c| c.0 != 0)
+                .unwrap_or(Colour::FABLED_PINK),
+        )
+    } else {
+        None
+    };
+
+    let perms = if let Some(roles) = roles.clone() {
+        let mut bits = 0;
+
+        if ctx.http.get_guild(msg.guild_id.unwrap().0).await?.owner_id == user.id {
+            bits = 2146959359;
         } else {
-            None
+            for role in roles {
+                bits |= role.permissions.bits
+            }
         }
+
+        Some(Permissions {
+            bits,
+        })
     } else {
         None
     };
