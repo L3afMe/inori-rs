@@ -1,6 +1,7 @@
 target/
 releases/
 logs/
+pfps/
 Cargo.lock
 
 config.toml
