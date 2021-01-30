@@ -1,13 +1,26 @@
-use std::cmp::max;
-
 use colored::Colorize;
+use semver::Version;
 
 use super::consts;
-use crate::{inori_debug, inori_info};
+use crate::{inori_debug, inori_error, inori_info};
 
 pub async fn check_is_latest() {
     inori_info!("Updater", "Checking for update");
     let latest = get_version().await;
+
+    let latest = if let Ok(ver) = Version::parse(&latest) {
+        ver
+    } else {
+        inori_error!("Updater", "Unable to parse latest semver: '{}'", latest);
+        return;
+    };
+
+    let current = if let Ok(ver) = Version::parse(&consts::PROG_VERSION) {
+        ver
+    } else {
+        inori_error!("Updater", "Unable to parse current semver: '{}'", latest);
+        return;
+    };
 
     inori_debug!(
         "Updater",
@@ -16,7 +29,8 @@ pub async fn check_is_latest() {
         latest
     );
 
-    if compare_versions(&consts::PROG_VERSION, &latest) {
+
+    if current < latest {
         inori_info!("Updater", "New update available at {}/releases", consts::GITHUB_LINK);
         inori_info!("Updater", "Current version: {}", consts::PROG_VERSION);
         inori_info!("Updater", "Available version: {}", latest);
@@ -52,36 +66,4 @@ async fn get_version() -> String {
     let obj = serde_json::from_str::<serde_json::Value>(&res).unwrap();
 
     obj[0]["name"].as_str().unwrap().to_string()
-}
-
-fn split_version(version: &str) -> Vec<&str> {
-    let mut version = version.strip_prefix('v').unwrap_or(version);
-
-    if version.contains('~') {
-        version = version.split('~').collect::<Vec<&str>>().get(0).unwrap();
-    }
-
-    version.split('.').collect::<Vec<&str>>()
-}
-
-fn compare_versions(curr_ver: &str, git_ver: &str) -> bool {
-    let curr_split = split_version(curr_ver);
-    let git_split = split_version(git_ver);
-
-    for idx in 0..max(curr_split.len(), git_split.len()) {
-        let curr_part = match curr_split.get(idx) {
-            Some(curr_part) => curr_part,
-            None => return true,
-        };
-        let git_part = match git_split.get(idx) {
-            Some(git_part) => git_part,
-            None => return false,
-        };
-
-        if curr_part != git_part {
-            return git_part > curr_part;
-        }
-    }
-
-    false
 }
