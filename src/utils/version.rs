@@ -31,9 +31,15 @@ pub async fn check_is_latest() {
 
 
     if current < latest {
-        inori_info!("Updater", "New update available at {}/releases", consts::GITHUB_LINK);
+        let udm = format!("Download: {}/releases/tag/{}", consts::GITHUB_LINK, latest);
+
+        let line = "=".repeat(udm.len());
+        inori_info!("Updater", "{}", line);
+        inori_info!("Updater", "New update found!");
         inori_info!("Updater", "Current version: {}", consts::PROG_VERSION);
         inori_info!("Updater", "Available version: {}", latest);
+        inori_info!("Updater", "{}", udm);
+        inori_info!("Updater", "{}", line);
     } else {
         inori_info!("Updater", "No new update found");
     }
