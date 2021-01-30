@@ -10,7 +10,7 @@ use urlencoding::encode;
 
 use crate::{
     models::commands::NekoBotResponse,
-    utils::{chat::is_mention, user::get_av},
+    utils::{chat::is_mention, discord::get_avatar},
     InoriChannelUtils, InoriMessageUtils, MessageCreator,
 };
 
@@ -92,7 +92,7 @@ async fn phcomment(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
         &format!(
             "https://nekobot.xyz/api/imagegen?type=phcomment&text={}&image={}&username={}",
             encode(&message),
-            encode(&get_av(user).await),
+            encode(&get_avatar(user)),
             encode(&user.name)
         ),
         "PornHub Comment",
@@ -146,7 +146,7 @@ async fn lolice(ctx: &Context, msg: &Message) -> CommandResult {
             msg,
             &format!(
                 "https://nekobot.xyz/api/imagegen?type=lolice&url={}",
-                encode(&get_av(&msg.author).await)
+                encode(&get_avatar(&msg.author))
             ),
             "Lolice",
         )
@@ -158,7 +158,7 @@ async fn lolice(ctx: &Context, msg: &Message) -> CommandResult {
                 msg,
                 &format!(
                     "https://nekobot.xyz/api/imagegen?type=lolice&url={}",
-                    encode(&get_av(&mention).await)
+                    encode(&get_avatar(&mention))
                 ),
                 "Lolice",
             )
@@ -180,7 +180,7 @@ async fn cutie(ctx: &Context, msg: &Message) -> CommandResult {
             msg,
             &format!(
                 "https://nekobot.xyz/api/imagegen?type=captcha&url={}&username=a%20cute%20in%20them",
-                encode(&get_av(&msg.author).await)
+                encode(&get_avatar(&msg.author))
             ),
             "Cutie",
         )
@@ -192,7 +192,7 @@ async fn cutie(ctx: &Context, msg: &Message) -> CommandResult {
                 msg,
                 &format!(
                     "https://nekobot.xyz/api/imagegen?type=captcha&url={}&username=a%20cutie%20in%20them",
-                    encode(&get_av(&mention).await)
+                    encode(&get_avatar(&mention))
                 ),
                 "Cutie",
             )

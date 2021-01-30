@@ -1,7 +1,7 @@
 use once_cell::sync::Lazy;
 use serde_json::{Number, Value};
 use serenity::{
-    model::prelude::{GuildId, Member, Permissions, Role, UserId},
+    model::prelude::{GuildId, Member, Permissions, Role, User, UserId},
     prelude::Context,
     utils::Colour,
     Result,
@@ -87,3 +87,10 @@ pub async fn get_permissions(
 pub const DM_PERMISSIONS: Lazy<Option<Permissions>> = Lazy::new(|| {
     Some(Permissions::from_bits(0b000_0010_0011_0101_1100_1100_0100_0000).unwrap_or_else(Permissions::empty))
 });
+
+pub fn get_avatar(user: &User) -> String {
+    match user.avatar_url() {
+        Some(av) => av,
+        None => user.default_avatar_url(),
+    }
+}

@@ -4,5 +4,4 @@ pub mod consts;
 pub mod discord;
 pub mod emotes;
 pub mod logging;
-pub mod user;
 pub mod version;
