@@ -1,6 +1,3 @@
-mod general;
-
-use general::*;
 use serenity::{
     framework::standard::{
         macros::{command, group},

@@ -1,8 +1,5 @@
-mod general;
-
 use std::collections::HashMap;
 
-use general::*;
 use once_cell::sync::Lazy;
 use rand::Rng;
 use serenity::{

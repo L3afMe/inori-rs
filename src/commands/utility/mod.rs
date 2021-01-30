@@ -1,6 +1,5 @@
 mod automsg;
 mod emotestealer;
-mod general;
 pub mod purge;
 mod tags;
 
@@ -8,7 +7,6 @@ mod tags;
 use std::{cmp::min, collections::HashMap, time::Instant};
 
 use emotestealer::*;
-use general::*;
 use purge::*;
 use serenity::{
     client::bridge::gateway::ShardId,

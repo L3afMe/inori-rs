@@ -1,9 +1,7 @@
-mod general;
 mod mal;
 mod pfpswitcher;
 mod quote;
 
-use general::*;
 use mal::*;
 use pfpswitcher::*;
 use quote::*;
