@@ -13,7 +13,10 @@ use serenity::{
 use serenity_utils::menu::{Menu, MenuOptions};
 use tokio::time::{delay_for, Duration};
 
-use crate::{utils::general::get_perms, Settings};
+use crate::{
+    utils::discord::{get_permissions, DM_PERMISSIONS},
+    Settings,
+};
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct BasicUser {
@@ -469,7 +472,17 @@ impl InoriChannelUtils for ChannelId {
         for<'b> F: FnOnce(&'b mut MessageCreator<'a>) -> &'b mut MessageCreator<'a>, {
         let mut msg_creator = MessageCreator::default();
         let msg = f(&mut msg_creator);
-        let perms = get_perms(ctx, self).await;
+        let perms = {
+            if let Ok(chnl) = ctx.http.get_channel(self.0).await {
+                if let Some(guild) = chnl.guild() {
+                    get_permissions(ctx, guild.guild_id, None, None).await
+                } else {
+                    DM_PERMISSIONS.unwrap()
+                }
+            } else {
+                DM_PERMISSIONS.unwrap()
+            }
+        };
         let embed_mode;
         let emotes = {
             let data = ctx.data.read().await;
@@ -542,7 +555,17 @@ impl InoriChannelUtils for ChannelId {
         embeds: Vec<MessageCreator<'a>>,
         options: MenuOptions,
     ) -> Result<Option<Message>, CommandError> {
-        let perms = get_perms(ctx, &msg.channel_id).await;
+        let perms = {
+            if let Ok(chnl) = ctx.http.get_channel(self.0).await {
+                if let Some(guild) = chnl.guild() {
+                    get_permissions(ctx, guild.guild_id, None, None).await
+                } else {
+                    DM_PERMISSIONS.unwrap()
+                }
+            } else {
+                DM_PERMISSIONS.unwrap()
+            }
+        };
         let mut formatted_embeds = Vec::new();
 
         let embed_mode;
@@ -658,7 +681,17 @@ impl InoriMessageUtils for Message {
         for<'b> F: FnOnce(&'b mut MessageCreator<'a>) -> &'b mut MessageCreator<'a>, {
         let mut msg_creator = MessageCreator::default();
         let msg = f(&mut msg_creator);
-        let perms = get_perms(ctx, &self.channel_id).await;
+        let perms = {
+            if let Ok(chnl) = ctx.http.get_channel(self.id.0).await {
+                if let Some(guild) = chnl.guild() {
+                    get_permissions(ctx, guild.guild_id, None, None).await
+                } else {
+                    DM_PERMISSIONS.unwrap()
+                }
+            } else {
+                DM_PERMISSIONS.unwrap()
+            }
+        };
 
         let embed_mode;
         let emotes = {

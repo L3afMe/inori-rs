@@ -14,7 +14,7 @@ use crate::{
         discord::BasicUser,
         settings::{AutoDeleteConfig, GiveawayConfig, PfpSwitcher, Settings, SlotBotConfig},
     },
-    try_or_msg,
+    try_or_string_err,
 };
 
 pub async fn get_valid_input<T, D: ToString, F, Fut>(msg: D, f: F) -> Option<T>
@@ -663,18 +663,18 @@ pub fn save_settings(settings: &Settings) {
 }
 
 pub fn _save_settings(settings: &Settings) -> Result<(), String> {
-    let contents = try_or_msg!(toml::to_string(settings), "Unable to serialize config".to_string());
+    let contents = try_or_string_err!(toml::to_string(settings), "Unable to serialize config".to_string());
 
     let mut f = match File::create("config.toml") {
         Ok(file) => file,
         Err(why) => return Err(format!("Unable to create 'config.toml'\n[Config] {}", why)),
     };
 
-    try_or_msg!(
+    try_or_string_err!(
         f.write_all(&contents.as_bytes()),
         "Unable to write config to buffer".to_string()
     );
 
-    try_or_msg!(f.sync_data(), "Unable to write config to 'config.toml'".to_string());
+    try_or_string_err!(f.sync_data(), "Unable to write config to 'config.toml'".to_string());
     Ok(())
 }
