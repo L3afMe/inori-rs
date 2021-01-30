@@ -84,7 +84,7 @@ pub async fn get_permissions(
     }
 }
 
-pub const DM_PERMISSIONS: Lazy<Option<Permissions>> = Lazy::new(|| {
+pub static DM_PERMISSIONS: Lazy<Option<Permissions>> = Lazy::new(|| {
     Some(Permissions::from_bits(0b000_0010_0011_0101_1100_1100_0100_0000).unwrap_or_else(Permissions::empty))
 });
 

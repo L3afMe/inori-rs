@@ -29,7 +29,7 @@ use serenity::{
     "Commands with a ~~`strikethrough`~~ require certain lacking permissions to execute."
 )]
 #[embed_error_colour(MEIBE_PINK)]
-#[embed_success_colour(BLURPLE)]
+#[embed_success_colour(FABLED_PINK)]
 pub async fn help(
     context: &Context,
     msg: &Message,
@@ -38,9 +38,6 @@ pub async fn help(
     groups: &[&'static CommandGroup],
     owners: HashSet<UserId>,
 ) -> CommandResult {
-    // Uncomment the following line and run `help` to
-    // generate a new COMMANDS.md
-    // commands_to_md(groups);
     let _ = help_commands::with_embeds(context, msg, args, help_options, groups, owners).await;
 
     Ok(())
