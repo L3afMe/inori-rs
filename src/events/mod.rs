@@ -32,6 +32,7 @@ impl EventHandler for Handler {
 }
 
 async fn spawn_pfp_change_thread(ctx: Arc<Mutex<Context>>) {
+    inori_info!("PfpSwitcher", "Spawning new thread");
     task::spawn(async move {
         loop {
             let start_time = std::time::SystemTime::now();

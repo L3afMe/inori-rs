@@ -19,7 +19,6 @@ use serenity::{
         channel::{ChannelType, Message},
         guild::Role,
         id::RoleId,
-        prelude::OnlineStatus,
     },
     prelude::Context,
 };
@@ -332,11 +331,15 @@ async fn serverinfo(ctx: &Context, msg: &Message) -> CommandResult {
         .await
         .unwrap();
 
-    let cached_guild = msg.guild_id.unwrap().to_guild_cached(&ctx.cache).await.unwrap();
 
-    let owner = cached_guild.owner_id.to_user(&ctx.http).await?;
+    let guild = ctx.http.get_guild(msg.guild_id.unwrap().0).await.unwrap();
+    let emotes = ctx.http.get_emojis(guild.id.0).await.unwrap_or_default();
+    let channels = ctx.http.get_channels(guild.id.0).await.unwrap_or_default();
+    let roles = ctx.http.get_guild_roles(guild.id.0).await.unwrap_or_default();
 
-    let emotes = {
+    let owner = guild.owner_id.to_user(&ctx.http).await?;
+
+    let sb_emotes = {
         let data = ctx.data.read().await;
         let settings = data.get::<Settings>().expect("Expected Settings in TypeMap.").lock().await;
 
@@ -345,15 +348,15 @@ async fn serverinfo(ctx: &Context, msg: &Message) -> CommandResult {
 
     let mut animated_emotes = 0;
     let mut regular_emotes = 0;
-    for emote in &cached_guild.emojis {
-        if emote.1.animated {
+    for emote in &emotes {
+        if emote.animated {
             animated_emotes += 1;
         } else {
             regular_emotes += 1;
         };
     }
 
-    let emoji_limit = cached_guild.premium_tier.num() * 50 + 50;
+    let emoji_limit = guild.premium_tier.num() * 50 + 50;
     let emote_string = format!(
         "Regular: {}/{}\nAnimated: {}/{}",
         regular_emotes, emoji_limit, animated_emotes, emoji_limit
@@ -361,9 +364,7 @@ async fn serverinfo(ctx: &Context, msg: &Message) -> CommandResult {
 
     let mut text_channels = 0;
     let mut voice_channels = 0;
-    for channel in &cached_guild.channels {
-        let channel = channel.1;
-
+    for channel in channels {
         if channel.kind == ChannelType::Text {
             text_channels += 1;
         } else if channel.kind == ChannelType::Voice {
@@ -371,75 +372,32 @@ async fn serverinfo(ctx: &Context, msg: &Message) -> CommandResult {
         }
     }
     let channels_text = format!(
-        "<:text_channel:{}> {}\n<:voice_channel:{}> {}",
-        emotes.get("text_channel").unwrap_or(&0),
+        "<:channel_text:{}> {}\n<:channel_voice:{}> {}",
+        sb_emotes.get("channel_text").unwrap_or(&0),
         text_channels,
-        emotes.get("voice_channel").unwrap_or(&0),
+        sb_emotes.get("channel_voice").unwrap_or(&0),
         voice_channels
     );
 
-    let mut bot_count = 0;
-    let mut human_count = 0;
-    let mut online_count = 0;
-    let mut idle_count = 0;
-    let mut dnd_count = 0;
-    let mut offline_count = 0;
-    for member_result in &cached_guild.members {
-        if member_result.1.user.bot {
-            bot_count += 1
-        } else {
-            human_count += 1
-        };
 
-        match cached_guild.presences.get(member_result.0) {
-            Some(presence) => match presence.status {
-                OnlineStatus::Online => online_count += 1,
-                OnlineStatus::DoNotDisturb => dnd_count += 1,
-                OnlineStatus::Idle => idle_count += 1,
-                OnlineStatus::Offline => offline_count += 1,
-                OnlineStatus::Invisible => offline_count += 1,
-                _ => {},
-            },
-            None => {
-                offline_count += 1;
-            },
-        }
-    }
-
-    let member_count = bot_count + human_count;
-    let member_string = format!(
-        "<:status_online:{}> {} • <:status_idle:{}> {} • <:status_dnd:{}> {} • <:status_offline:{}> {}\n{} humans \
-         \n{} bots\n{} total",
-        emotes.get("status_online").unwrap_or(&0),
-        online_count,
-        emotes.get("status_idle").unwrap_or(&0),
-        idle_count,
-        emotes.get("status_dnd").unwrap_or(&0),
-        dnd_count,
-        emotes.get("status_offline").unwrap_or(&0),
-        offline_count,
-        human_count,
-        bot_count,
-        member_count
-    );
     let boosts_string = format!(
-        "<:nitro_boost:{}> {}\nLevel {}",
-        emotes.get("nitro_boost").unwrap_or(&0),
-        cached_guild.premium_subscription_count,
-        cached_guild.premium_tier.num()
+        "<:boost:{}> {}\nLevel {}",
+        sb_emotes.get("boost").unwrap_or(&0),
+        guild.premium_subscription_count,
+        guild.premium_tier.num()
     );
 
     new_msg
         .update_noret(ctx, |m: &mut MessageCreator| {
             m.title("Server Info")
-                .content(format!("**{}**", &cached_guild.name))
-                .thumbnail(&cached_guild.icon_url().unwrap_or_default())
-                .footer_text(format!("ID: {} | Created", cached_guild.id.0))
+                .content(format!("**{}**", &guild.name))
+                .thumbnail(&guild.icon_url().unwrap_or_default())
+                .footer_text(format!("ID: {} | Created", guild.id.0))
+                .timestamp(msg.guild_id.unwrap().created_at())
                 .field("Emotes", emote_string, true)
                 .field("Channels", channels_text, true)
-                .field("Members", member_string, false)
                 .field("Boosts", boosts_string, true)
-                .field("Roles", format!("{} roles", cached_guild.roles.len()), true)
+                .field("Roles", format!("{} roles", roles.len()), true)
                 .field("Owner", owner.tag(), true)
         })
         .await

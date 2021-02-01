@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use async_trait::async_trait;
+use chrono::prelude::{DateTime, Utc};
 use serde_derive::Deserialize;
 use serenity::{
     builder::{CreateEmbed, CreateMessage},
@@ -368,8 +369,8 @@ impl<'a> MessageCreator<'a> {
         self
     }
 
-    pub fn timestamp<D: ToString>(&mut self, timestamp: D) -> &mut Self {
-        self.timestamp = Some(timestamp.to_string());
+    pub fn timestamp(&mut self, timestamp: DateTime<Utc>) -> &mut Self {
+        self.timestamp = Some(timestamp.format("%+").to_string());
 
         self
     }
