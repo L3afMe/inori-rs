@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer};
 use serenity::{client::bridge::gateway::ShardManager, prelude::TypeMapKey};
 use tokio::sync::Mutex;
 
@@ -30,14 +30,14 @@ impl Img {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Rule34Post {
     pub file_url: String,
     pub tags:     String,
     pub md5:      String,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Rule34Posts {
     #[serde(rename = "post")]
     pub posts: Option<Vec<Rule34Post>>,
@@ -55,7 +55,7 @@ impl TypeMapKey for CommandCounter {
     type Value = HashMap<String, u64>;
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct FrankFurterResponse {
     pub amount: f64,
     pub base:   String,
@@ -63,7 +63,7 @@ pub struct FrankFurterResponse {
     pub rates:  HashMap<String, f64>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct MALMangaSearchResult {
     pub mal_id:     u64,
     pub url:        String,
@@ -81,7 +81,7 @@ pub struct MALMangaSearchResult {
     pub members:    u64,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct MALAnimeSearchResult {
     pub mal_id:     u64,
     pub url:        String,
@@ -118,14 +118,14 @@ where
     Deserialize::deserialize(d).map(|x: Option<_>| x.unwrap_or_else(|| "Unrated".to_string()))
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct MALPreview {
     pub mal_id: u64,
     pub name:   String,
     pub url:    String,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct MALCharacterSearchResult {
     pub mal_id:          u64,
     pub url:             String,
@@ -136,7 +136,7 @@ pub struct MALCharacterSearchResult {
     pub manga:           Vec<MALPreview>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct MALPersonSearchResult {
     pub mal_id:          u64,
     pub url:             String,
@@ -145,8 +145,15 @@ pub struct MALPersonSearchResult {
     pub alternate_names: Vec<String>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct MALSearchResponse<T> {
     pub last_page: u64,
     pub results:   Vec<T>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct CleanURIResponse {
+    #[serde(default)]
+    pub result_url: String,
+    pub error:      Option<String>,
 }
