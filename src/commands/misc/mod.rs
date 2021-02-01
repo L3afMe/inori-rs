@@ -11,6 +11,7 @@ use serenity::{
 };
 
 use crate::{
+    models::commands::CleanURIResponse,
     parse_arg,
     utils::{
         chat::{get_user, is_user},
@@ -20,7 +21,7 @@ use crate::{
 };
 
 #[group]
-#[commands(about, avatar, color, hypesquad, poll, ratelimits, spammer)]
+#[commands(about, avatar, color, hypesquad, poll, ratelimits, spammer, urlshortener)]
 #[description("**Miscellaneous**")]
 struct Miscellaneous;
 
@@ -425,6 +426,59 @@ async fn spammer(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
             m.success()
                 .title("Spammer")
                 .content(format!("Successfully sent {} messages", count))
+        })
+        .await
+}
+
+#[command]
+#[aliases("shorten")]
+#[description("Shorten a URL using CleanURI")]
+#[usage("<URL>")]
+#[example("https://l3af.me/inori-rs")]
+#[num_args(1)]
+async fn urlshortener(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let url = args.single::<String>().unwrap_or_default();
+
+    let client = reqwest::Client::new();
+    let res = client
+        .post("https://cleanuri.com/api/v1/shorten")
+        .json(&serde_json::json!({ "url": url }))
+        .send()
+        .await;
+
+    let res = if let Ok(res) = res {
+        if let Ok(res) = res.json::<CleanURIResponse>().await {
+            res
+        } else {
+            return msg
+                .channel_id
+                .send_tmp(ctx, |m: &mut MessageCreator| {
+                    m.error()
+                        .title("URL Shortener")
+                        .content("Unable to parse response to JSON object")
+                })
+                .await;
+        }
+    } else {
+        return msg
+            .channel_id
+            .send_tmp(ctx, |m: &mut MessageCreator| {
+                m.error().title("URL Shortener").content("Unable to POST https://cleanuri.com")
+            })
+            .await;
+    };
+
+    msg.channel_id
+        .send_tmp(ctx, |m: &mut MessageCreator| {
+            m.title("URL Shortner");
+            if let Some(err) = res.error {
+                m.error().content(err)
+            } else {
+                m.content(&format!(
+                    "URL shortened!\nOriginal URL: {}\n Shortened URL: {}",
+                    url, res.result_url
+                ))
+            }
         })
         .await
 }
