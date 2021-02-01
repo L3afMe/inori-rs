@@ -18,7 +18,6 @@ use serenity::{
     model::{
         channel::{ChannelType, Message},
         guild::Role,
-        id::RoleId,
     },
     prelude::Context,
 };
@@ -229,18 +228,18 @@ async fn roleinfo(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         .await
         .unwrap();
 
-    let cached_guild = msg.guild_id.unwrap().to_guild_cached(&ctx.cache).await.unwrap();
-    let roles = cached_guild
-        .clone()
-        .roles
+    let guild = ctx.http.get_guild(msg.guild_id.unwrap().0).await.unwrap();
+    let roles = ctx.http.get_guild_roles(guild.id.0).await.unwrap_or_default();
+
+    let roles = roles
         .into_iter()
-        .filter(|(_, role)| role.name.to_lowercase().contains(&role_name_inp))
-        .collect::<HashMap<RoleId, Role>>();
+        .filter(|role| role.name.to_lowercase().contains(&role_name_inp))
+        .collect::<Vec<Role>>();
     let roles_eq = roles
         .clone()
         .into_iter()
-        .filter(|(_, role)| role.name.to_lowercase().eq(&role_name_inp))
-        .collect::<HashMap<RoleId, Role>>();
+        .filter(|role| role.name.to_lowercase().eq(&role_name_inp))
+        .collect::<Vec<Role>>();
 
     let role = match roles.len() {
         0 => {
@@ -252,22 +251,14 @@ async fn roleinfo(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 })
                 .await;
         },
-        1 => {
-            let keys = roles.keys().collect::<Vec<&RoleId>>();
-            let key = keys.get(0).unwrap();
-
-            roles.get(key).unwrap()
-        },
+        1 => roles.get(0).unwrap(),
         _ => {
             if roles_eq.len() == 1 {
-                let keys = roles_eq.keys().collect::<Vec<&RoleId>>();
-                let key = keys.get(0).unwrap();
-
-                roles_eq.get(key).unwrap()
+                roles_eq.get(0).unwrap()
             } else {
                 let role_list = roles_eq
                     .into_iter()
-                    .map(|r| format!("<@&{}> - {}", r.0, r.0))
+                    .map(|r| format!("<@&{}> - {}", r.id, r.name))
                     .collect::<Vec<String>>();
 
                 return new_msg
