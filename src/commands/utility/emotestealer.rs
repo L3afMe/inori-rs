@@ -147,7 +147,6 @@ async fn save(menu: &mut Menu<'_>, _reaction: Reaction) {
     let path_str = format!("./tmp_{}.{}", rand::thread_rng().gen_range(100000000..999999999), ext);
 
     let ctx = menu.ctx.clone();
-    let msg = menu.msg.clone();
 
     let _ = tokio::task::spawn(async move {
         let img = reqwest::get(&emote_url).await.unwrap().bytes().await.unwrap();
@@ -169,9 +168,8 @@ async fn save(menu: &mut Menu<'_>, _reaction: Reaction) {
                 drop(settings);
                 drop(data);
 
-                let _ = msg
-                    .channel_id
-                    .send_tmp(&ctx, |m: &mut MessageCreator| {
+                let _ = new_msg
+                    .update_tmp(&ctx, |m: &mut MessageCreator| {
                         m.error()
                             .title("Emote Stealer")
                             .content(format!("Couldn't add new emote\nError: {:?}", why))
