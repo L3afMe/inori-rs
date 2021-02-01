@@ -17,16 +17,14 @@ use serenity::{
 #[dm_only_text("DMs")]
 #[guild_only_text("Servers")]
 #[dm_and_guild_text("DMs and Servers")]
-#[max_levenshtein_distance(4)]
+#[max_levenshtein_distance(2)]
 #[indention_prefix("-")]
 #[lacking_permissions("Strike")]
 #[lacking_role("Strike")]
 #[wrong_channel("Strike")]
-#[strikethrough_commands_tip_in_dm(
-    "Commands with a ~~`strikethrough`~~ require certain lacking permissions to execute."
-)]
+#[strikethrough_commands_tip_in_dm("Commands with a ~~`strikethrough`~~ are required to be executed in a guild.")]
 #[strikethrough_commands_tip_in_guild(
-    "Commands with a ~~`strikethrough`~~ require certain lacking permissions to execute."
+    "Commands with a ~~`strikethrough`~~ require certain lacking permissions or are required to be executed in DMs."
 )]
 #[embed_error_colour(MEIBE_PINK)]
 #[embed_success_colour(FABLED_PINK)]
