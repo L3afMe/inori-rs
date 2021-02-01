@@ -101,6 +101,7 @@ async fn main() {
         .group(&CONFIG_GROUP)
         .group(&MISCELLANEOUS_GROUP)
         .group(&UTILITY_GROUP)
+        .group(&PROGRAMMING_GROUP)
         .group(&MODERATION_GROUP);
 
     inori_info!("Bot", "Configured framework");

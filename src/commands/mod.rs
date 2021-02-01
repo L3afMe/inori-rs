@@ -5,6 +5,7 @@ pub mod interactions;
 pub mod misc;
 pub mod moderation;
 pub mod nsfw;
+pub mod programming;
 pub mod utility;
 
 pub use config::CONFIG_GROUP;
@@ -14,4 +15,5 @@ pub use interactions::INTERACTIONS_GROUP;
 pub use misc::MISCELLANEOUS_GROUP;
 pub use moderation::MODERATION_GROUP;
 pub use nsfw::NSFW_GROUP;
+pub use programming::PROGRAMMING_GROUP;
 pub use utility::UTILITY_GROUP;
