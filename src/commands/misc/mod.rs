@@ -157,42 +157,36 @@ async fn ratelimits(ctx: &Context, msg: &Message) -> CommandResult {
 #[description("Run a poll, options split with `|`. Max of 10 options")]
 #[usage("<question> | <option> | <option> | <option>")]
 #[example("Do you like chocolate? | Yes | No")]
+#[delimiters("|")]
+#[min_args(3)]
+#[max_args(11)]
 async fn poll(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let args = args.rest();
     let spl = args.split('|').collect::<Vec<&str>>();
 
-    if args.contains('|') && spl.len() >= 3 && spl.len() <= 11 {
-        let emojis = (0..(spl.len() - 1))
-            .map(|i| std::char::from_u32('🇦' as u32 + i as u32).expect("Failed to format emoji"))
-            .collect::<Vec<_>>();
+    let emojis = (0..(spl.len() - 1))
+        .map(|i| std::char::from_u32('🇦' as u32 + i as u32).expect("Failed to format emoji"))
+        .collect::<Vec<_>>();
 
-        let poll_msg = msg
-            .channel_id
-            .send(ctx, |m: &mut MessageCreator| {
-                m.title("Poll").content(format!("**{}**", spl[0]));
+    let poll_msg = msg
+        .channel_id
+        .send(ctx, |m: &mut MessageCreator| {
+            m.title("Poll").content(format!("**{}**", spl[0]));
 
-                for i in 1..spl.len() {
-                    m.field(emojis[i - 1], spl[i], true);
-                }
+            for i in 1..spl.len() {
+                m.field(emojis[i - 1], spl[i], true);
+            }
 
-                m
-            })
-            .await
-            .unwrap();
+            m
+        })
+        .await
+        .unwrap();
 
-        for &emoji in &emojis {
-            poll_msg.react(&ctx.http, ReactionType::Unicode(emoji.to_string())).await?;
-        }
-
-        Ok(())
-    } else {
-        return msg
-            .channel_id
-            .send_tmp(ctx, |m: &mut MessageCreator| {
-                m.error().title("Poll").content("Invalid arguments")
-            })
-            .await;
+    for &emoji in &emojis {
+        poll_msg.react(&ctx.http, ReactionType::Unicode(emoji.to_string())).await?;
     }
+
+    Ok(())
 }
 
 #[command]
