@@ -1,6 +1,6 @@
 # Inori-rs - A Rust Selfbot using [Serenity-rs](https://github.com/serenity-rs/serenity/)
 ![License](https://img.shields.io/github/license/L3afMe/Inori-rs?color=%23FAB1ED&style=for-the-badge)
-![Latest release](https://img.shields.io/github/v/release/L3afMe/Inori-rs?include_prereleases&color=%23FAB1ED&style=for-the-badge)
+![Latest release](https://img.shields.io/github/v/release/L3afMe/inori-rs?color=FAB1ED&include_prereleases&sort=semver&style=for-the-badge)
 ![GitHub Workflow Status](https://img.shields.io/github/workflow/status/L3afMe/Inori-rs/Rust%20Checker?color=%23FAB1ED&style=for-the-badge)
 ![Lines of code](https://img.shields.io/tokei/lines/github/L3afMe/inori-rs?color=%23FAB1ED&style=for-the-badge)
 
