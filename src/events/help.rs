@@ -27,7 +27,7 @@ use serenity::{
     "Commands with a ~~`strikethrough`~~ require certain lacking permissions or are required to be executed in DMs."
 )]
 #[embed_error_colour(MEIBE_PINK)]
-#[embed_success_colour(FABLED_PINK)]
+#[embed_success_colour("#FAB1ED")]
 pub async fn help(
     context: &Context,
     msg: &Message,
