@@ -1,3 +1,5 @@
+# Due to a bug in Serenity which causes Inori-rs to block for some users after a few hours, development has ceased and everything is being migrated to Golang at [NekoGo](https://github.com/L3afMe/NekoGo) If anyone is able to reliably recreate and/or fix this issue then Inori development will continue
+
 # Inori-rs - A Rust Selfbot using [Serenity-rs](https://github.com/serenity-rs/serenity/)
 ![License](https://img.shields.io/github/license/L3afMe/Inori-rs?color=%23FAB1ED&style=for-the-badge)
 ![Latest release](https://img.shields.io/github/v/release/L3afMe/inori-rs?color=FAB1ED&include_prereleases&sort=semver&style=for-the-badge)
